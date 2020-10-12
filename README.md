@@ -1,6 +1,6 @@
-# Gardens Template 
+# TEC Template 
 
-Aragon DAO Template to experiment with public community coordination.
+DAO Template for Token Engineering Commons.
 
 ## Local deployment
 

@@ -90,12 +90,16 @@ contract GardensTemplate is BaseTemplate {
     * @dev Create the DAO and initialise the basic apps necessary for gardens
     * @param _voteTokenName The name for the token used by share holders in the organization
     * @param _voteTokenSymbol The symbol for the token used by share holders in the organization
+    * @param _holders List of holder addresses
+    * @param _stakes List of holder initial stakes
     * @param _votingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration, voteBufferBlocks, voteExecutionDelayBlocks] to set up the voting app of the organization
     * @param _useAgentAsVault Whether to use an Agent app or Vault app
     */
     function createDaoTxOne(
         string _voteTokenName,
         string _voteTokenSymbol,
+        address[] _holders,
+        uint256[] _stakes,
         uint64[5] _votingSettings,
         bool _useAgentAsVault
     )
@@ -108,6 +112,12 @@ contract GardensTemplate is BaseTemplate {
         Vault fundingPoolVault = _useAgentAsVault ? _installDefaultAgentApp(dao) : _installVaultApp(dao);
         DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
+
+        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+        for (uint256 i = 0; i < _holders.length; i++) {
+              hookedTokenManager.mint(_holders[i], _stakes[i]);
+        }
+        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
 
         if (_useAgentAsVault) {
             _createAgentPermissions(acl, Agent(fundingPoolVault), dandelionVoting, dandelionVoting);
