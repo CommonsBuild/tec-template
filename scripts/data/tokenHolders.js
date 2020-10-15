@@ -153,18 +153,12 @@ const TOKEN_HOLDERS = [
   }
 ]
 
-const INCREASER = 100
+const IMPACT_HOUR_RATE = 100
 
-function adjustStake(stake) {
-  return Math.ceil(stake) * INCREASER
+function convertStake(stake) {
+  return Math.round(stake * IMPACT_HOUR_RATE) 
 }
 
-exports.HOLDERS = TOKEN_HOLDERS.reduce((addresses, tokenHolder) => {
-  addresses.push(tokenHolder.address)
-  return addresses
-}, [])
+exports.HOLDERS = TOKEN_HOLDERS.map(({ address }) => address)
 
-exports.STAKES = TOKEN_HOLDERS.reduce((stakes, tokenHolder) => {
-  stakes.push(adjustStake(tokenHolder.stakes))
-  return stakes
-}, [])
+exports.STAKES = TOKEN_HOLDERS.map(({ stakes }) => convertStake(stakes))
