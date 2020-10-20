@@ -90,16 +90,12 @@ contract GardensTemplate is BaseTemplate {
     * @dev Create the DAO and initialise the basic apps necessary for gardens
     * @param _voteTokenName The name for the token used by share holders in the organization
     * @param _voteTokenSymbol The symbol for the token used by share holders in the organization
-    * @param _holders List of holder addresses
-    * @param _stakes List of holder initial stakes
     * @param _votingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration, voteBufferBlocks, voteExecutionDelayBlocks] to set up the voting app of the organization
     * @param _useAgentAsVault Whether to use an Agent app or Vault app
     */
     function createDaoTxOne(
         string _voteTokenName,
         string _voteTokenSymbol,
-        address[] _holders,
-        uint256[] _stakes,
         uint64[5] _votingSettings,
         bool _useAgentAsVault
     )
@@ -113,12 +109,6 @@ contract GardensTemplate is BaseTemplate {
         DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
-        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
-        for (uint256 i = 0; i < _holders.length; i++) {
-              hookedTokenManager.mint(_holders[i], _stakes[i]);
-        }
-        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
-
         if (_useAgentAsVault) {
             _createAgentPermissions(acl, Agent(fundingPoolVault), dandelionVoting, dandelionVoting);
         }
@@ -126,6 +116,25 @@ contract GardensTemplate is BaseTemplate {
         _createCustomVotingPermissions(acl, dandelionVoting, hookedTokenManager);
 
         _storeDeployedContractsTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager);
+    }
+
+    /**
+    * @dev Mint tokens for the holders.
+    * @param _holders List of holder addresses
+    * @param _stakes List of holder initial stakes
+     */
+    function createTxTokenHolders(
+        address[] _holders,
+        uint256[] _stakes
+    )
+        public
+    {
+        (, ACL acl,,, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
+        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+        for (uint256 i = 0; i < _holders.length; i++) {
+              hookedTokenManager.mint(_holders[i], _stakes[i]);
+        }
+        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
     }
 
     /**

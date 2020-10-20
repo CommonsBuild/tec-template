@@ -1,12 +1,10 @@
+const { HOLDERS, STAKES } = require('./data/tokenHolders')
 const GardensTemplate = artifacts.require("GardensTemplate")
 
 const DAO_ID = "testtec" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
 const NETWORK_ARG = "--network"
 const DAO_ID_ARG = "--daoid"
 const collateralTokenAddress = '0x0000000000000000000000000000000000000000'
-
-const HOLDERS = []
-const INITIAL_STAKES = []
 
 const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.argv[process.argv.indexOf(arg) + 1] : defaultValue
 
@@ -73,12 +71,16 @@ module.exports = async (callback) => {
     const createDaoTxOneReceipt = await gardensTemplate.createDaoTxOne(
       ORG_TOKEN_NAME,
       ORG_TOKEN_SYMBOL,
-      HOLDERS,
-      INITIAL_STAKES,
       VOTING_SETTINGS,
       USE_AGENT_AS_VAULT
-    );
+    )
     console.log(`Tx One Complete. DAO address: ${createDaoTxOneReceipt.logs.find(x => x.event === "DeployDao").args.dao} Gas used: ${createDaoTxOneReceipt.receipt.gasUsed} `)
+    
+    const createTxTokenHoldersReceipt = await gardensTemplate.createTxTokenHolders(
+      HOLDERS,
+      STAKES,
+    )  
+    console.log(`Tx Token Holders complete. Receipt: ${createTxTokenHoldersReceipt}`)
 
     const createDaoTxTwoReceipt = await gardensTemplate.createDaoTxTwo(
       collateralTokenAddress,
