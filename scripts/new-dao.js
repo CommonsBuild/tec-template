@@ -1,15 +1,20 @@
 const { HOLDERS, STAKES } = require('./data/tokenHolders')
 const GardensTemplate = artifacts.require("GardensTemplate")
+const MiniMeToken = artifacts.require("MiniMeToken")
+const Token = artifacts.require("Token")
 
 const DAO_ID = "testtec" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
 const NETWORK_ARG = "--network"
 const DAO_ID_ARG = "--daoid"
-const collateralTokenAddress = '0x0000000000000000000000000000000000000000'
+const NON_MINIME_COLLATERAL = "--nonminime"
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+const TOKEN_OWNER = "0xDc2aDfA800a1ffA16078Ef8C1F251D50DcDa1065"
 
 const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.argv[process.argv.indexOf(arg) + 1] : defaultValue
 
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
+const nonMiniMeCollateral = () => argValue(NON_MINIME_COLLATERAL, false)
 
 const gardensTemplateAddress = () => {
   if (network() === "rinkeby") {
@@ -31,6 +36,12 @@ const ONE_TOKEN = 1e18
 const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
 const FUNDRAISING_ONE_TOKEN = 1e6
 
+const COLLATERAL_TOKEN_NAME = "Test DAI"
+const COLLATERAL_TOKEN_SYMBOL = "tDAI"
+const COLLATERAL_TOKEN_DECIMALS = 18
+const COLLATERAL_TOKEN_TRANSFERS_ENABLED = true
+const COLLATERAL_BALANCE = 10e23
+
 // Create dao transaction one config
 const ORG_TOKEN_NAME = "Token Engineering Commons TEST Token"
 const ORG_TOKEN_SYMBOL = "TESTTEC"
@@ -44,15 +55,13 @@ const USE_AGENT_AS_VAULT = false
 
 // Create dao transaction two config
 const TOLLGATE_FEE = 3 * ONE_TOKEN
-const USE_CONVICTION_AS_FINANCE = true
-const FINANCE_PERIOD = 0 // Irrelevant if using conviction as finance
 
 // Create dao transaction three config
 const PRESALE_GOAL = 300 * ONE_TOKEN
 const PRESALE_PERIOD = 7 * DAYS
 const PRESALE_EXCHANGE_RATE = 0.0003 * FUNDRAISING_ONE_TOKEN
-const VESTING_CLIFF_PERIOD = 3 * DAYS
-const VESTING_COMPLETE_PERIOD = 3 * 7 * DAYS // 3 weeks
+const VESTING_CLIFF_PERIOD = PRESALE_PERIOD + 3 * DAYS // 3 days after presale
+const VESTING_COMPLETE_PERIOD = VESTING_CLIFF_PERIOD + 3 * 7 * DAYS // 3 weeks after cliff
 const PRESALE_PERCENT_SUPPLY_OFFERED = FUNDRAISING_ONE_HUNDRED_PERCENT
 const PRESALE_PERCENT_FUNDING_FOR_BENEFICIARY = 0.35 * FUNDRAISING_ONE_HUNDRED_PERCENT
 const OPEN_DATE = 0
@@ -64,9 +73,37 @@ const VIRTUAL_SUPPLY = 2 // TODO
 const VIRTUAL_BALANCE = 1 // TODO
 const RESERVE_RATIO = 0.1 * FUNDRAISING_ONE_HUNDRED_PERCENT
 
+const scale = n => parseInt(n * 10 ** 7)
+const HALFTIME = 0.25 * DAYS //
+const BLOCKTIME = 15 // 15 rinkeby, 13 mainnet, 5 xdai
+const CONVERTED_TIME = 1/BLOCKTIME * HALFTIME
+const DECAY = 1/2 ** (1/CONVERTED_TIME) // alpha
+const MAX_RATIO = 0.25 // 25 percent
+const MIN_THRESHOLD = 0.05 // 5 percent
+const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD // determine weight based on MAX_RATIO and MIN_THRESHOLD
+// const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effective supply
+const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT)]
+
 module.exports = async (callback) => {
   try {
     const gardensTemplate = await GardensTemplate.at(gardensTemplateAddress())
+    let collateralToken
+
+    if (nonMiniMeCollateral()) {
+      collateralToken = await Token.new(TOKEN_OWNER, COLLATERAL_TOKEN_NAME, COLLATERAL_TOKEN_SYMBOL)
+    } else {
+      collateralToken = await MiniMeToken.new(
+        ZERO_ADDRESS,
+        ZERO_ADDRESS,
+        0,
+        COLLATERAL_TOKEN_NAME,
+        COLLATERAL_TOKEN_DECIMALS,
+        COLLATERAL_TOKEN_SYMBOL,
+        COLLATERAL_TOKEN_TRANSFERS_ENABLED
+      )
+      await collateralToken.generateTokens(TOKEN_OWNER, COLLATERAL_BALANCE)
+    }
+    console.log(`Created ${COLLATERAL_TOKEN_SYMBOL} Token: ${collateralToken.address}`)
 
     const createDaoTxOneReceipt = await gardensTemplate.createDaoTxOne(
       ORG_TOKEN_NAME,
@@ -83,12 +120,11 @@ module.exports = async (callback) => {
     console.log(`Tx Token Holders complete. Receipt: ${createTxTokenHoldersReceipt}`)
 
     const createDaoTxTwoReceipt = await gardensTemplate.createDaoTxTwo(
-      collateralTokenAddress,
+      collateralToken.address,
       TOLLGATE_FEE,
-      [collateralTokenAddress],
-      USE_CONVICTION_AS_FINANCE,
-      FINANCE_PERIOD,
-      collateralTokenAddress
+      [collateralToken.address],
+      CONVICTION_SETTINGS,
+      collateralToken.address
     )
     console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
 

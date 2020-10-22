@@ -32,20 +32,20 @@ contract GardensTemplate is BaseTemplate {
     * bytes32 private constant MARKETPLACE_CONTROLLER_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("marketplace-controller")));
     */
     // Local app ID's
-    bytes32 private constant DANDELION_VOTING_APP_ID = 0x2d7442e1c4cb7a7013aecc419f938bdfa55ad32d90002fb92ee5969e27b2bf07;
-    bytes32 private constant REDEMPTIONS_APP_ID = 0xbf9fefd9508fe20f068aa3714e9beb8c4fc6dea33dc4c75371b96140d6350d20;
-    bytes32 private constant CONVICTION_VOTING_APP_ID = 0x589851b3734f6578a92f33bfc26877a1166b95238be1f484deeaac6383d14c38;
-    bytes32 private constant TOLLGATE_APP_ID = 0x7075e547e73484f0736b2160fcfb010b4f32b751fc729c25b677a0347d9b4246;
-    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = 0xb2d2065b829a91588c8b9a15d99acd026f6673733603c6c60e505654eb2b472d;
+    // bytes32 private constant DANDELION_VOTING_APP_ID = 0x2d7442e1c4cb7a7013aecc419f938bdfa55ad32d90002fb92ee5969e27b2bf07;
+    // bytes32 private constant REDEMPTIONS_APP_ID = 0xbf9fefd9508fe20f068aa3714e9beb8c4fc6dea33dc4c75371b96140d6350d20;
+    // bytes32 private constant CONVICTION_VOTING_APP_ID = 0x589851b3734f6578a92f33bfc26877a1166b95238be1f484deeaac6383d14c38;
+    // bytes32 private constant TOLLGATE_APP_ID = 0x7075e547e73484f0736b2160fcfb010b4f32b751fc729c25b677a0347d9b4246;
+    // bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = 0xb2d2065b829a91588c8b9a15d99acd026f6673733603c6c60e505654eb2b472d;
 
     // Rinkeby app ID's
-//        bytes32 private constant DANDELION_VOTING_APP_ID = 0x40a80c4b4050993512df39c802adec62dafeb1f0586cc15f4d34bda9c47ba468; // gardens-dandelion-voting.open.aragonpm.eth
-//        bytes32 private constant REDEMPTIONS_APP_ID = 0x743bd419d5c9061290b181b19e114f36e9cc9ddb42b4e54fc811edb22eb85e9d;
-//        bytes32 private constant TOLLGATE_APP_ID = 0x0d321283289e70165ef6db7f11fc62c74a7d39dac3ee148428c4f9e3d74c6d61; // tollgate.open.aragonpm.eth
-//        bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = 0x26bb91b115bf14acbdc18d75042e165321eceeb3d10d852386576bbd0ec11519; // gardens-token-manager.open.aragonpm.eth
+       bytes32 private constant DANDELION_VOTING_APP_ID = 0x40a80c4b4050993512df39c802adec62dafeb1f0586cc15f4d34bda9c47ba468; // gardens-dandelion-voting.open.aragonpm.eth
+       bytes32 private constant REDEMPTIONS_APP_ID = 0x743bd419d5c9061290b181b19e114f36e9cc9ddb42b4e54fc811edb22eb85e9d;
+       bytes32 private constant TOLLGATE_APP_ID = 0x0d321283289e70165ef6db7f11fc62c74a7d39dac3ee148428c4f9e3d74c6d61; // tollgate.open.aragonpm.eth
+       bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = 0x26bb91b115bf14acbdc18d75042e165321eceeb3d10d852386576bbd0ec11519; // gardens-token-manager.open.aragonpm.eth
 
     //    bytes32 private constant CONVICTION_VOTING_APP_ID = 0xc5e2e4d7422daecfc2dc08a9932e5b9f84cf5b2f61a81ef13e257b4803b93b2f; // gardens-conviction-voting.open.aragonpm.eth
-//        bytes32 private constant CONVICTION_VOTING_APP_ID = 0x2e20d4e6af7ec3f285a8c7358e357d14483ccf38e79779c3037bc70c24141038; // conviction-voting-gardens.open.aragonpm.eth
+       bytes32 private constant CONVICTION_VOTING_APP_ID = 0x2e20d4e6af7ec3f285a8c7358e357d14483ccf38e79779c3037bc70c24141038; // conviction-voting-gardens.open.aragonpm.eth
 
     // Local and Rinkeby app ID's (no need to change between environments)
     bytes32 private constant BANCOR_FORMULA_ID = 0xd71dde5e4bea1928026c1779bde7ed27bd7ef3d0ce9802e4117631eb6fa4ed7d;
@@ -142,16 +142,14 @@ contract GardensTemplate is BaseTemplate {
     * @param _tollgateFeeToken The token used to pay the tollgate fee
     * @param _tollgateFeeAmount The tollgate fee amount
     * @param _redeemableTokens Array of initially redeemable tokens
-    * @param _useConvictionAsFinance Whether to use conviction voting or finance
-    * @param _financePeriod Finance period
+    * @param _convictionSettings Array with delay, maxRatio, and weight
     * @param _collateralToken Token distributed by conviction voting and used as collateral in fundraising
     */
     function createDaoTxTwo(
         ERC20 _tollgateFeeToken,
         uint256 _tollgateFeeAmount,
         address[] _redeemableTokens,
-        bool _useConvictionAsFinance,
-        uint64 _financePeriod,
+        uint256[3] _convictionSettings,
         address _collateralToken
     )
         public
@@ -172,20 +170,14 @@ contract GardensTemplate is BaseTemplate {
         Redemptions redemptions = _installRedemptions(senderDeployedContracts[msg.sender].dao, fundingPoolVault, hookedTokenManager, _redeemableTokens);
         _createRedemptionsPermissions(acl, redemptions, dandelionVoting);
 
-        if (_useConvictionAsFinance) {
-            ConvictionVoting convictionVoting = _installConvictionVoting(senderDeployedContracts[msg.sender].dao, hookedTokenManager.token(), fundingPoolVault, _collateralToken);
-            _createVaultPermissions(acl, fundingPoolVault, convictionVoting, dandelionVoting);
-            _createConvictionVotingPermissions(acl, convictionVoting, dandelionVoting);
+        ConvictionVoting convictionVoting = _installConvictionVoting(senderDeployedContracts[msg.sender].dao, hookedTokenManager.token(), fundingPoolVault, _collateralToken, _convictionSettings);
+        _createVaultPermissions(acl, fundingPoolVault, convictionVoting, dandelionVoting);
+        _createConvictionVotingPermissions(acl, convictionVoting, dandelionVoting);
 
-            _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
-            hookedTokenManager.registerHook(convictionVoting);
-            hookedTokenManager.registerHook(dandelionVoting);
-            _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
-        } else {
-            Finance finance = _installFinanceApp(senderDeployedContracts[msg.sender].dao, fundingPoolVault, _financePeriod == 0 ? DEFAULT_FINANCE_PERIOD : _financePeriod);
-            _createVaultPermissions(acl, fundingPoolVault, finance, dandelionVoting);
-            _createFinancePermissions(acl, finance, dandelionVoting, dandelionVoting);
-        }
+        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
+        hookedTokenManager.registerHook(convictionVoting);
+        hookedTokenManager.registerHook(dandelionVoting);
+        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
 
         _storeDeployedContractsTxTwo(_collateralToken);
     }
@@ -304,11 +296,11 @@ contract GardensTemplate is BaseTemplate {
         return redemptions;
     }
 
-    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, address _requestToken)
+    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, address _requestToken, uint256[3] _convictionSettings)
         internal returns (ConvictionVoting)
     {
         ConvictionVoting convictionVoting = ConvictionVoting(_installNonDefaultApp(_dao, CONVICTION_VOTING_APP_ID));
-        convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken);
+        convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2]);
         return convictionVoting;
     }
 
