@@ -34,7 +34,7 @@ const DAYS = 24 * HOURS
 const ONE_HUNDRED_PERCENT = 1e18
 const ONE_TOKEN = 1e18
 const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
-const FUNDRAISING_ONE_TOKEN = 1e6
+const FUNDRAISING_ONE_TOKEN = 1e18
 
 const COLLATERAL_TOKEN_NAME = "Test DAI"
 const COLLATERAL_TOKEN_SYMBOL = "tDAI"
@@ -47,9 +47,9 @@ const ORG_TOKEN_NAME = "Token Engineering Commons TEST Token"
 const ORG_TOKEN_SYMBOL = "TESTTEC"
 const SUPPORT_REQUIRED = 0.6 * ONE_HUNDRED_PERCENT
 const MIN_ACCEPTANCE_QUORUM = 0.02 * ONE_HUNDRED_PERCENT
-const VOTE_DURATION_BLOCKS = 3 * DAYS / 5 // 3 days
-const VOTE_BUFFER_BLOCKS = 8 * HOURS / 5 // 8 hours
-const VOTE_EXECUTION_DELAY_BLOCKS = 24 * HOURS / 5 // 24 hours
+const VOTE_DURATION_BLOCKS = 3 * DAYS / 5 // 3 days on xDAI, ~1 day on Rinkeby
+const VOTE_BUFFER_BLOCKS = 8 * HOURS / 5 // 8 hours on xDAI, ~2 hours & 40 minutes on Rinkeby
+const VOTE_EXECUTION_DELAY_BLOCKS = 24 * HOURS / 5 // 24 hours on xDAI, 8 hours on Rinkeby
 const VOTING_SETTINGS = [SUPPORT_REQUIRED, MIN_ACCEPTANCE_QUORUM, VOTE_DURATION_BLOCKS, VOTE_BUFFER_BLOCKS, VOTE_EXECUTION_DELAY_BLOCKS]
 const USE_AGENT_AS_VAULT = false
 
@@ -59,13 +59,13 @@ const TOLLGATE_FEE = 3 * ONE_TOKEN
 // Create dao transaction three config
 const PRESALE_GOAL = 300 * ONE_TOKEN
 const PRESALE_PERIOD = 7 * DAYS
-const PRESALE_EXCHANGE_RATE = 0.0003 * FUNDRAISING_ONE_TOKEN
+const PRESALE_EXCHANGE_RATE = 0.00000001 * FUNDRAISING_ONE_TOKEN
 const VESTING_CLIFF_PERIOD = PRESALE_PERIOD + 3 * DAYS // 3 days after presale
 const VESTING_COMPLETE_PERIOD = VESTING_CLIFF_PERIOD + 3 * 7 * DAYS // 3 weeks after cliff
 const PRESALE_PERCENT_SUPPLY_OFFERED = FUNDRAISING_ONE_HUNDRED_PERCENT
 const PRESALE_PERCENT_FUNDING_FOR_BENEFICIARY = 0.35 * FUNDRAISING_ONE_HUNDRED_PERCENT
 const OPEN_DATE = 0
-const BUY_FEE_PCT = 0.2 * ONE_HUNDRED_PERCENT
+const BUY_FEE_PCT = 0 * ONE_HUNDRED_PERCENT
 const SELL_FEE_PCT = 0.2 * ONE_HUNDRED_PERCENT
 
 // Create dao transaction four config
@@ -74,12 +74,12 @@ const VIRTUAL_BALANCE = 1 // TODO
 const RESERVE_RATIO = 0.1 * FUNDRAISING_ONE_HUNDRED_PERCENT
 
 const scale = n => parseInt(n * 10 ** 7)
-const HALFTIME = 0.25 * DAYS //
+const HALFTIME = 0.5 * DAYS //
 const BLOCKTIME = 15 // 15 rinkeby, 13 mainnet, 5 xdai
 const CONVERTED_TIME = 1/BLOCKTIME * HALFTIME
 const DECAY = 1/2 ** (1/CONVERTED_TIME) // alpha
-const MAX_RATIO = 0.25 // 25 percent
-const MIN_THRESHOLD = 0.05 // 5 percent
+const MAX_RATIO = 0.4 // 40 percent
+const MIN_THRESHOLD = 0.005 // 0.5 percent
 const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD // determine weight based on MAX_RATIO and MIN_THRESHOLD
 // const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effective supply
 const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT)]
@@ -109,7 +109,8 @@ module.exports = async (callback) => {
       ORG_TOKEN_NAME,
       ORG_TOKEN_SYMBOL,
       VOTING_SETTINGS,
-      USE_AGENT_AS_VAULT
+      USE_AGENT_AS_VAULT,
+      TOKEN_OWNER
     )
     console.log(`Tx One Complete. DAO address: ${createDaoTxOneReceipt.logs.find(x => x.event === "DeployDao").args.dao} Gas used: ${createDaoTxOneReceipt.receipt.gasUsed} `)
     

@@ -76,6 +76,8 @@ contract GardensTemplate is BaseTemplate {
 
     mapping(address => DeployedContracts) internal senderDeployedContracts;
 
+    address permissionManager;
+
     constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
         public
@@ -97,11 +99,13 @@ contract GardensTemplate is BaseTemplate {
         string _voteTokenName,
         string _voteTokenSymbol,
         uint64[5] _votingSettings,
-        bool _useAgentAsVault
+        bool _useAgentAsVault,
+        address _permissionManager
     )
         public
     {
         require(_votingSettings.length == 5, ERROR_BAD_VOTE_SETTINGS);
+        permissionManager = _permissionManager;
 
         (Kernel dao, ACL acl) = _createDAO();
         MiniMeToken voteToken = _createToken(_voteTokenName, _voteTokenSymbol, TOKEN_DECIMALS);
@@ -110,9 +114,9 @@ contract GardensTemplate is BaseTemplate {
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
         if (_useAgentAsVault) {
-            _createAgentPermissions(acl, Agent(fundingPoolVault), dandelionVoting, dandelionVoting);
+            _createAgentPermissions(acl, Agent(fundingPoolVault), dandelionVoting, permissionManager);
         }
-        _createEvmScriptsRegistryPermissions(acl, dandelionVoting, dandelionVoting);
+        _createEvmScriptsRegistryPermissions(acl, dandelionVoting, permissionManager);
         _createCustomVotingPermissions(acl, dandelionVoting, hookedTokenManager);
 
         _storeDeployedContractsTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager);
@@ -171,7 +175,7 @@ contract GardensTemplate is BaseTemplate {
         _createRedemptionsPermissions(acl, redemptions, dandelionVoting);
 
         ConvictionVoting convictionVoting = _installConvictionVoting(senderDeployedContracts[msg.sender].dao, hookedTokenManager.token(), fundingPoolVault, _collateralToken, _convictionSettings);
-        _createVaultPermissions(acl, fundingPoolVault, convictionVoting, dandelionVoting);
+        _createVaultPermissions(acl, fundingPoolVault, convictionVoting, permissionManager);
         _createConvictionVotingPermissions(acl, convictionVoting, dandelionVoting);
 
         _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
@@ -420,33 +424,33 @@ contract GardensTemplate is BaseTemplate {
     function _createCustomVotingPermissions(ACL _acl, DandelionVoting _dandelionVoting, HookedTokenManager _hookedTokenManager)
         internal
     {
-        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_QUORUM_ROLE(), _dandelionVoting);
-        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_SUPPORT_ROLE(), _dandelionVoting);
-        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_BUFFER_BLOCKS_ROLE(), _dandelionVoting);
-        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_EXECUTION_DELAY_ROLE(), _dandelionVoting);
+        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_QUORUM_ROLE(), permissionManager);
+        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_SUPPORT_ROLE(), permissionManager);
+        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_BUFFER_BLOCKS_ROLE(), permissionManager);
+        _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_EXECUTION_DELAY_ROLE(), permissionManager);
     }
 
     function _createTollgatePermissions(ACL _acl, Tollgate _tollgate, DandelionVoting _dandelionVoting) internal {
-        _acl.createPermission(_dandelionVoting, _tollgate, _tollgate.CHANGE_AMOUNT_ROLE(), _dandelionVoting);
-        _acl.createPermission(_dandelionVoting, _tollgate, _tollgate.CHANGE_DESTINATION_ROLE(), _dandelionVoting);
-        _acl.createPermission(_tollgate, _dandelionVoting, _dandelionVoting.CREATE_VOTES_ROLE(), _dandelionVoting);
+        _acl.createPermission(_dandelionVoting, _tollgate, _tollgate.CHANGE_AMOUNT_ROLE(), permissionManager);
+        _acl.createPermission(_dandelionVoting, _tollgate, _tollgate.CHANGE_DESTINATION_ROLE(), permissionManager);
+        _acl.createPermission(_tollgate, _dandelionVoting, _dandelionVoting.CREATE_VOTES_ROLE(), permissionManager);
     }
 
     function _createRedemptionsPermissions(ACL _acl, Redemptions _redemptions, DandelionVoting _dandelionVoting)
         internal
     {
         _acl.createPermission(ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), address(this));
-        _setOracle(_acl, ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), _dandelionVoting);
+        _setOracle(_acl, ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), permissionManager);
         _acl.setPermissionManager(_dandelionVoting, _redemptions, _redemptions.REDEEM_ROLE());
 
-        _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.ADD_TOKEN_ROLE(), _dandelionVoting);
-        _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.REMOVE_TOKEN_ROLE(), _dandelionVoting);
+        _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.ADD_TOKEN_ROLE(), permissionManager);
+        _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.REMOVE_TOKEN_ROLE(), permissionManager);
     }
 
     function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting, DandelionVoting _dandelionVoting)
         internal
     {
-        _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), _dandelionVoting);
+        _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), permissionManager);
     }
 
     function _createHookedTokenManagerPermissions() internal {
@@ -457,11 +461,11 @@ contract GardensTemplate is BaseTemplate {
         address[] memory grantees = new address[](2);
         grantees[0] = address(marketMaker);
         grantees[1] = address(presale);
-        acl.createPermission(marketMaker, hookedTokenManager, hookedTokenManager.MINT_ROLE(), dandelionVoting);
-        acl.createPermission(presale, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), dandelionVoting);
+        acl.createPermission(marketMaker, hookedTokenManager, hookedTokenManager.MINT_ROLE(), permissionManager);
+        acl.createPermission(presale, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), permissionManager);
         acl.createPermission(presale, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), dandelionVoting);
-        acl.createPermission(presale, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), dandelionVoting);
-        _createPermissions(acl, grantees, hookedTokenManager, hookedTokenManager.BURN_ROLE(), dandelionVoting);
+        acl.createPermission(presale, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), permissionManager);
+        _createPermissions(acl, grantees, hookedTokenManager, hookedTokenManager.BURN_ROLE(), permissionManager);
     }
 
     function _createFundraisingPermissions() internal {
@@ -470,25 +474,25 @@ contract GardensTemplate is BaseTemplate {
         (Vault reserveVault, Presale presale, MarketMaker marketMaker, Controller controller) = _getDeployedContractsTxThree();
 
         // reserveVault
-        acl.createPermission(marketMaker, reserveVault, reserveVault.TRANSFER_ROLE(), dandelionVoting);
+        acl.createPermission(marketMaker, reserveVault, reserveVault.TRANSFER_ROLE(), permissionManager);
         // presale
-        acl.createPermission(controller, presale, presale.OPEN_ROLE(), dandelionVoting);
-        acl.createPermission(controller, presale, presale.CONTRIBUTE_ROLE(), dandelionVoting);
+        acl.createPermission(controller, presale, presale.OPEN_ROLE(), permissionManager);
+        acl.createPermission(controller, presale, presale.CONTRIBUTE_ROLE(), permissionManager);
         // market maker
-        acl.createPermission(controller, marketMaker, marketMaker.CONTROLLER_ROLE(), dandelionVoting);
+        acl.createPermission(controller, marketMaker, marketMaker.CONTROLLER_ROLE(), permissionManager);
         // controller
         // ADD_COLLATERAL_TOKEN_ROLE is handled later [after collaterals have been added]
-        acl.createPermission(dandelionVoting, controller, controller.UPDATE_BENEFICIARY_ROLE(), dandelionVoting);
-        acl.createPermission(dandelionVoting, controller, controller.UPDATE_FEES_ROLE(), dandelionVoting);
-        acl.createPermission(dandelionVoting, controller, controller.REMOVE_COLLATERAL_TOKEN_ROLE(), dandelionVoting);
-        acl.createPermission(dandelionVoting, controller, controller.UPDATE_COLLATERAL_TOKEN_ROLE(), dandelionVoting);
-        acl.createPermission(ANY_ENTITY, controller, controller.OPEN_PRESALE_ROLE(), dandelionVoting);
-        acl.createPermission(presale, controller, controller.OPEN_TRADING_ROLE(), dandelionVoting);
-        acl.createPermission(ANY_ENTITY, controller, controller.CONTRIBUTE_ROLE(), dandelionVoting);
-        acl.createPermission(ANY_ENTITY, controller, controller.MAKE_BUY_ORDER_ROLE(), dandelionVoting);
+        acl.createPermission(dandelionVoting, controller, controller.UPDATE_BENEFICIARY_ROLE(), permissionManager);
+        acl.createPermission(dandelionVoting, controller, controller.UPDATE_FEES_ROLE(), permissionManager);
+        acl.createPermission(dandelionVoting, controller, controller.REMOVE_COLLATERAL_TOKEN_ROLE(), permissionManager);
+        acl.createPermission(dandelionVoting, controller, controller.UPDATE_COLLATERAL_TOKEN_ROLE(), permissionManager);
+        acl.createPermission(ANY_ENTITY, controller, controller.OPEN_PRESALE_ROLE(), permissionManager);
+        acl.createPermission(presale, controller, controller.OPEN_TRADING_ROLE(), permissionManager);
+        acl.createPermission(ANY_ENTITY, controller, controller.CONTRIBUTE_ROLE(), permissionManager);
+        acl.createPermission(ANY_ENTITY, controller, controller.MAKE_BUY_ORDER_ROLE(), permissionManager);
         acl.createPermission(ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), address(this));
-        _setOracle(acl, ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), dandelionVoting);
-        acl.setPermissionManager(dandelionVoting, controller, controller.MAKE_SELL_ORDER_ROLE());
+        _setOracle(acl, ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), permissionManager);
+        acl.setPermissionManager(permissionManager, controller, controller.MAKE_SELL_ORDER_ROLE());
     }
 
     // Temporary Storage functions //
