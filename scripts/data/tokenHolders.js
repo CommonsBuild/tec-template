@@ -156,7 +156,7 @@ const TOKEN_HOLDERS = [
 const IMPACT_HOUR_RATE = 100
 
 function convertStake(stake) {
-  return Math.round(stake * IMPACT_HOUR_RATE) 
+  return Math.round(stake * IMPACT_HOUR_RATE * 1e18)
 }
 
 exports.HOLDERS = TOKEN_HOLDERS.map(({ address }) => address)
