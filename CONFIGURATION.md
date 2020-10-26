@@ -1,22 +1,28 @@
+All configuration settings can be found in `scripts/new-dao.js`
 
-`scripts/new-dao.js`
-```javascript
-  const DAO_ID = "testtec" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
-  const NETWORK_ARG = "--network"
-  const DAO_ID_ARG = "--daoid"
-  const NON_MINIME_COLLATERAL = "--nonminime"
-  const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-  const TOKEN_OWNER = "0xDc2aDfA800a1ffA16078Ef8C1F251D50DcDa1065"
+### Global Configuration
 
-  // The following are ecosystem constants
-  const HOURS = 60 * 60
-  const DAYS = 24 * HOURS
-  const ONE_HUNDRED_PERCENT = 1e18
-  const ONE_TOKEN = 1e18
-  const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
-  const FUNDRAISING_ONE_TOKEN = 1e6
+Configurable, change these to suit your needs.
+ - `DAO_ID`
+  The id for the DAO. To redploy reuse the same id
+ - `TOKEN_OWNER` The address for the token owner (`0xDc2aDfA800a1ffA16078Ef8C1F251D50DcDa1065`)
 
-```
+These should never need to be changed.
+ - `ZERO_ADDRESS` The public key to use for default addresses. (`0x0`)
+ - `HOURS` The definition of an hour in seconds (`3600`)
+ - `DAYS` The definition of a day in seconds (`86400`)
+ - `ONE_HUNDRED_PERCENT` The definition of 100% of a token (`1e18`)
+ - `ONE_TOKEN` The definition of 1 token (`1e18`)
+ - `FUNDRAISING_ONE_HUNDRED_PERCENT` The PPM for fundraising (`1e6`)
+
+### CLI arguments
+
+ - `--network`
+  The network to deploy to (eg rinkeby, mainnet etc) (`local`)
+ - `--daoid`
+  The daoid to use. Overwrites `DAO_ID` set in new-dao.js (`testtec$random_number`)
+ - `--nonminime`
+  Wether to use a MiniMe token or not. Overwrites `NON_MINIME_COLLATERAL` set in new-dao.js (`false`)
 
 ### Colateral - MiniMe New Token Configuration
 
@@ -56,6 +62,10 @@ Please note that in order to create a new `MiniMe` token to use as collateral fo
  - `PRESALE_GOAL` The Hatch goal in token units (eg wei). (`300000000`)
  - `PRESALE_PERIOD` Hatch duration in seconds. Set to `0` for no Hatch. (`7 days`)
  - `PRESALE_EXCHANGE_RATE` Presale exchange rate in PPM (`300`)
+ - `BUY_FEE_PCT`
+    Percentage of fee to charge for buys (`20%`)
+ - `SELL_FEE_PCT`
+    Percentage of fee to charge for buys (`20%`)
  - `VESTING_CLIFF_PERIOD` Vesting cliff length for presale bought tokens in seconds (`3 days after hatch`)
  - `PRESALE_PERCENT_SUPPLY_OFFERED` Percent of total supply offered in presale in PPM (`100% of fundraising supply`)(`1e16`)
  - `VESTING_COMPLETE_PERIOD` Vesting complete length for presale bought tokens in seconds (`3 weeks after Cliff`)
@@ -64,27 +74,11 @@ Please note that in order to create a new `MiniMe` token to use as collateral fo
  - `OPEN_DATE`
     How many days until the Hatch finishes, set to '0' for no Hatch
 
-### Automated Market Maker
+### DAO Four - ?
 
- - `BUY_FEE_PCT`
-    Percentage of fee to charge for buys (`20%`)
- - `SELL_FEE_PCT`
-    Percentage of fee to charge for buys (`20%`)
-
-// Create dao transaction four config
-const VIRTUAL_SUPPLY = 2 // TODO
-const VIRTUAL_BALANCE = 1 // TODO
-const RESERVE_RATIO = 0.1 * FUNDRAISING_ONE_HUNDRED_PERCENT
-
-### Funding Pool
-
-### Redemptions
-
-### Conviction Voting
-
- - `DECAY`
-    The rate at which conviction is accrued or lost from a proposal
- - `MAX_RATIO` default(`25%`)
-    The maximum ratio...
- - `WEIGHT`
-    determine weight based on MAX_RATIO and MIN_THRESHOLD
+ - `VIRTUAL_SUPPLY`
+    Collateral token virtual supply in wei (`2`)
+ - `VIRTUAL_BALANCE`
+    Collateral token virtual balance in wei (`1`)
+ - `RESERVE_RATIO`
+    The reserve ratio to be used for the collateral token in PPM (`100000`)
