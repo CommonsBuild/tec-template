@@ -26,14 +26,14 @@ These should never need to be changed.
 
 ### Colateral - MiniMe New Token Configuration
 
-Please note that in order to create a new `MiniMe` token to use as collateral for the tollgate, please pass `--nonminime=true` argument.
+We created tDAI to act as the collateral for this DAO... it was all given to Sem and then passed to people for testing this deployment
 
- - `COLLATERAL_BALANCE`. The initial balance (`1000000000000000000000000`)
+ - `COLLATERAL_BALANCE`. The initial balance created for Sem (`1000000000000000000000000`)
  - `COLLATERAL_TOKEN_DECIMALS`. The number of decimal places for the token. (`18`)
  - `COLLATERAL_TOKEN_SYMBOL`. The symbody for the token. (`tDAI`)
  - `COLLATERAL_TOKEN_NAME`. The name for the token (`Test DAI`)
 
-### DAO One - Deploy the organisation
+### DAO Deploy part1 - Deploy the organisation with Dandilion voting
 
  - `ORG_TOKEN_NAME`. The name for the token used by share holders in the organization. (`Token Engineering Commons TEST Token`)
  - `ORG_TOKEN_SYMBOL`. The symbol for the token used by share holders in the organization (`TESTTEC`)
@@ -45,7 +45,7 @@ Please note that in order to create a new `MiniMe` token to use as collateral fo
   - `VOTE_EXECUTION_DELAY_BLOCKS`. (`24 hrs`)
  - `USE_AGENT_AS_VAULT` Whether to use an Agent app or Vault app. (`false`)
 
-### DAO Two - Tollgate
+### DAO Deploy part2 - Tollgate & Conviction Voting
 
  - `collateralToken.address`. The token used to pay the tollgate fee. (`0x0`)
  - `TOLLGATE_FEE` The tollgate fee amount. (`3 tokens`)
@@ -57,7 +57,7 @@ Please note that in order to create a new `MiniMe` token to use as collateral fo
   - `WEIGHT` Determine weight based on `MAX_RATIO` and `MIN_THRESHOLD`. (`0.03125`)(`MAX_RATIO`^2 * `MIN_THRESHOLD`)
  - `collateralToken.address`. Token distributed by conviction voting and used as collateral in fundraising. (`0x0`)
 
-### DAO Three - Hatch (fundraising/presale)
+### DAO Deploy part3 - Presale (Hatch) and TestTEC Token manager
 
  - `PRESALE_GOAL` The Hatch goal in token units (eg wei). (`300000000`)
  - `PRESALE_PERIOD` Hatch duration in seconds. Set to `0` for no Hatch. (`7 days`)
@@ -74,7 +74,7 @@ Please note that in order to create a new `MiniMe` token to use as collateral fo
  - `OPEN_DATE`
     How many days until the Hatch finishes, set to '0' for no Hatch
 
-### DAO Four - ?
+### DAO Four - Marketplace App
 
  - `VIRTUAL_SUPPLY`
     Collateral token virtual supply in wei (`2`)
