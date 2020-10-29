@@ -84,6 +84,9 @@ const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD // determine weight based on MAX_R
 // const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effective supply
 const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT)]
 
+// Create token holders transaction config
+const CHUNK = 15
+
 module.exports = async (callback) => {
   try {
     const gardensTemplate = await GardensTemplate.at(gardensTemplateAddress())
@@ -114,12 +117,6 @@ module.exports = async (callback) => {
     )
     console.log(`Tx One Complete. DAO address: ${createDaoTxOneReceipt.logs.find(x => x.event === "DeployDao").args.dao} Gas used: ${createDaoTxOneReceipt.receipt.gasUsed} `)
     
-    const createTxTokenHoldersReceipt = await gardensTemplate.createTxTokenHolders(
-      HOLDERS,
-      STAKES,
-    )  
-    console.log(`Tx Token Holders complete. Receipt: ${createTxTokenHoldersReceipt}`)
-
     const createDaoTxTwoReceipt = await gardensTemplate.createDaoTxTwo(
       collateralToken.address,
       TOLLGATE_FEE,
@@ -128,6 +125,25 @@ module.exports = async (callback) => {
       collateralToken.address
     )
     console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
+
+    let counter = 1
+    let total = Math.ceil(HOLDERS.length / CHUNK)
+    if (HOLDERS.length === STAKES.length) {
+      for (let i = 0, j = HOLDERS.length; i < j; i += CHUNK) {
+        const txReceipt = await gardensTemplate.createTxTokenHolders(
+          HOLDERS.slice(i, i + CHUNK),
+          STAKES.slice(i, i + CHUNK),
+          OPEN_DATE,
+          VESTING_CLIFF_PERIOD,
+          VESTING_COMPLETE_PERIOD
+        )
+        console.log(`Token Holders Txs: ${counter} of ${total}. Token holders ${i + 1} to ${i + CHUNK} created. Gas fee: ${txReceipt.receipt.gasUsed}`)
+        counter++
+      }
+    }
+    else {
+      console.log('Token Holders Txs skypped: Holders and Stakes length mismatch')
+    }
 
     const createDaoTxThreeReceipt = await gardensTemplate.createDaoTxThree(
       PRESALE_GOAL,
