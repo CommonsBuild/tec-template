@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@1hive/apps-dandelion-voting/contracts/DandelionVoting.sol";
 import "@1hive/apps-redemptions/contracts/Redemptions.sol";
 import "@1hive/apps-token-manager/contracts/HookedTokenManager.sol";
@@ -13,8 +14,10 @@ import {IBancorMarketMaker as MarketMaker} from "./external/IBancorMarketMaker.s
 import {IAragonFundraisingController as Controller} from "./external/IAragonFundraisingController.sol";
 
 contract GardensTemplate is BaseTemplate {
+    using SafeMath64 for uint64;
 
     string constant private ERROR_MISSING_MEMBERS = "MISSING_MEMBERS";
+    string constant private ERROR_TOKENS_STAKES_MISMATCH = "TOKENS_STAKE_MISMATCH";
     string constant private ERROR_BAD_VOTE_SETTINGS = "BAD_SETTINGS";
     string constant private ERROR_NO_CACHE = "NO_CACHE";
     string constant private ERROR_NO_COLLATERAL = "NO_COLLATERAL";
@@ -123,25 +126,6 @@ contract GardensTemplate is BaseTemplate {
     }
 
     /**
-    * @dev Mint tokens for the holders.
-    * @param _holders List of holder addresses
-    * @param _stakes List of holder initial stakes
-     */
-    function createTxTokenHolders(
-        address[] _holders,
-        uint256[] _stakes
-    )
-        public
-    {
-        (, ACL acl,,, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
-        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
-        for (uint256 i = 0; i < _holders.length; i++) {
-              hookedTokenManager.mint(_holders[i], _stakes[i]);
-        }
-        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
-    }
-
-    /**
     * @dev Add and initialise tollgate, redemptions and conviction voting or finance apps
     * @param _tollgateFeeToken The token used to pay the tollgate fee
     * @param _tollgateFeeAmount The tollgate fee amount
@@ -184,6 +168,62 @@ contract GardensTemplate is BaseTemplate {
         _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
 
         _storeDeployedContractsTxTwo(_collateralToken);
+    }
+
+    // function issueTokens(
+    //     uint256[] _stakes
+    // )
+    //     public
+    // {
+    //     (, ACL acl,,, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
+    //     _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.ISSUE_ROLE());
+
+    //     for (uint256 i = 0; i < _stakes.length; i++) {
+    //         hookedTokenManager.issue(_stakes[i]);
+    //     }
+
+    //     _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.ISSUE_ROLE());
+    // }
+
+    /**
+    * @dev Mint vested tokens for the initial holders.
+    * @param _holders List of holder addresses
+    * @param _stakes List of holder stakes
+    * @param _openDate Date the vesting calculations start
+    * @param _vestingCliffPeriod Date when the initial portion of tokens are transferable
+    * @param _vestingCompletePeriod Date when all tokens are transferable
+    */
+    function createTxTokenHolders(
+        address[] _holders,
+        uint256[] _stakes,
+        uint64 _openDate,
+        uint64 _vestingCliffPeriod,
+        uint64 _vestingCompletePeriod
+    )
+        public
+    {
+        require(_holders.length == _stakes.length, ERROR_TOKENS_STAKES_MISMATCH);
+        (, ACL acl,,, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
+        uint64 vestingCliffDate = _openDate.add(_vestingCliffPeriod);
+        uint64 vestingCompleteDate = _openDate.add(_vestingCompletePeriod);
+
+        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.ISSUE_ROLE());
+        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE());
+
+        for (uint256 i = 0; i < _holders.length; i++) {
+            hookedTokenManager.issue(_stakes[i]);
+            hookedTokenManager.assignVested(
+                _holders[i],
+                _stakes[i],
+                _openDate,
+                vestingCliffDate,
+                vestingCompleteDate,
+                true /* revokable */
+            );
+        }
+
+        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.ISSUE_ROLE());
+        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE());
     }
 
     /**
