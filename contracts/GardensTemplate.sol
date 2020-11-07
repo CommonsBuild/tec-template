@@ -32,12 +32,13 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     uint8 private constant ORACLE_PARAM_ID = 203;
     enum Op { NONE, EQ, NEQ, GT, LT, GTE, LTE, RET, NOT, AND, OR, XOR, IF_ELSE }
 
-    struct DeployedContracts {
+    struct StoredAddresses {
         Kernel dao;
         ACL acl;
         DandelionVoting dandelionVoting;
         Vault fundingPoolVault;
         HookedTokenManager hookedTokenManager;
+        address permissionManager;
         address collateralToken;
         Vault reserveVault;
         Presale presale;
@@ -45,9 +46,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         Controller controller;
     }
 
-    mapping(address => DeployedContracts) internal senderDeployedContracts;
-
-    address permissionManager;
+    mapping(address => StoredAddresses) internal senderStoredAddresses;
 
     constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
@@ -76,7 +75,6 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         public
     {
         require(_votingSettings.length == 5, ERROR_BAD_VOTE_SETTINGS);
-        permissionManager = _permissionManager;
 
         (Kernel dao, ACL acl) = _createDAO();
         MiniMeToken voteToken = _createToken(_voteTokenName, _voteTokenSymbol, TOKEN_DECIMALS);
@@ -84,13 +82,17 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
-        if (_useAgentAsVault) {
-            _createAgentPermissions(acl, Agent(fundingPoolVault), dandelionVoting, permissionManager);
+        if (_permissionManager == 0x0) {
+            _permissionManager = address(dandelionVoting);
         }
-        _createEvmScriptsRegistryPermissions(acl, dandelionVoting, permissionManager);
+
+        if (_useAgentAsVault) {
+            _createAgentPermissions(acl, Agent(fundingPoolVault), dandelionVoting, _permissionManager);
+        }
+        _createEvmScriptsRegistryPermissions(acl, dandelionVoting, _permissionManager);
         _createCustomVotingPermissions(acl, dandelionVoting, hookedTokenManager);
 
-        _storeDeployedContractsTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager);
+        _storeAddressesTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager, _permissionManager);
     }
 
     /**
@@ -105,53 +107,39 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         ERC20 _tollgateFeeToken,
         uint256 _tollgateFeeAmount,
         address[] _redeemableTokens,
-        uint256[3] _convictionSettings,
+        uint256[4] _convictionSettings,
         address _collateralToken
     )
         public
     {
         require(_tollgateFeeToken != address(0), ERROR_NO_TOLLGATE_TOKEN);
         require(_collateralToken != address(0), ERROR_NO_COLLATERAL);
-        require(senderDeployedContracts[msg.sender].dao != address(0), ERROR_NO_CACHE);
+        require(senderStoredAddresses[msg.sender].dao != address(0), ERROR_NO_CACHE);
 
         (,
         ACL acl,
         DandelionVoting dandelionVoting,
         Vault fundingPoolVault,
-        HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
+        HookedTokenManager hookedTokenManager,
+        address permissionManager) = _getStoredAddressesTxOne();
 
-        Tollgate tollgate = _installTollgate(senderDeployedContracts[msg.sender].dao, _tollgateFeeToken, _tollgateFeeAmount, address(fundingPoolVault));
+        Tollgate tollgate = _installTollgate(senderStoredAddresses[msg.sender].dao, _tollgateFeeToken, _tollgateFeeAmount, address(fundingPoolVault));
         _createTollgatePermissions(acl, tollgate, dandelionVoting);
 
-        Redemptions redemptions = _installRedemptions(senderDeployedContracts[msg.sender].dao, fundingPoolVault, hookedTokenManager, _redeemableTokens);
+        Redemptions redemptions = _installRedemptions(senderStoredAddresses[msg.sender].dao, fundingPoolVault, hookedTokenManager, _redeemableTokens);
         _createRedemptionsPermissions(acl, redemptions, dandelionVoting);
 
-        ConvictionVoting convictionVoting = _installConvictionVoting(senderDeployedContracts[msg.sender].dao, hookedTokenManager.token(), fundingPoolVault, _collateralToken, _convictionSettings);
+        ConvictionVoting convictionVoting = _installConvictionVoting(senderStoredAddresses[msg.sender].dao, hookedTokenManager.token(), fundingPoolVault, _collateralToken, _convictionSettings);
         _createVaultPermissions(acl, fundingPoolVault, convictionVoting, permissionManager);
-        _createConvictionVotingPermissions(acl, convictionVoting, dandelionVoting);
+        _createConvictionVotingPermissions(acl, convictionVoting);
 
         _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
         hookedTokenManager.registerHook(convictionVoting);
         hookedTokenManager.registerHook(dandelionVoting);
         _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
 
-        _storeDeployedContractsTxTwo(_collateralToken);
+        _storeAddressesTxTwo(_collateralToken);
     }
-
-    // function issueTokens(
-    //     uint256[] _stakes
-    // )
-    //     public
-    // {
-    //     (, ACL acl,,, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
-    //     _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.ISSUE_ROLE());
-
-    //     for (uint256 i = 0; i < _stakes.length; i++) {
-    //         hookedTokenManager.issue(_stakes[i]);
-    //     }
-
-    //     _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.ISSUE_ROLE());
-    // }
 
     /**
     * @dev Mint vested tokens for the initial holders.
@@ -171,7 +159,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         public
     {
         require(_holders.length == _stakes.length, ERROR_TOKENS_STAKES_MISMATCH);
-        (, ACL acl,,, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
+        (, ACL acl,,, HookedTokenManager hookedTokenManager,) = _getStoredAddressesTxOne();
         uint64 vestingCliffDate = _openDate.add(_vestingCliffPeriod);
         uint64 vestingCompleteDate = _openDate.add(_vestingCompletePeriod);
 
@@ -221,7 +209,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     )
         public
     {
-        require(senderDeployedContracts[msg.sender].collateralToken != address(0), ERROR_NO_CACHE);
+        require(senderStoredAddresses[msg.sender].collateralToken != address(0), ERROR_NO_CACHE);
 
         _installFundraisingApps(
             _goal,
@@ -255,10 +243,10 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     )
         public
     {
-        require(senderDeployedContracts[msg.sender].reserveVault != address(0), ERROR_NO_CACHE);
+        require(senderStoredAddresses[msg.sender].reserveVault != address(0), ERROR_NO_CACHE);
 
         _validateId(_id);
-        (Kernel dao, ACL acl, DandelionVoting dandelionVoting,,) = _getDeployedContractsTxOne();
+        (Kernel dao, ACL acl, DandelionVoting dandelionVoting,,,) = _getStoredAddressesTxOne();
 
         _setupCollateralToken(dao, acl, _virtualSupply, _virtualBalance, _reserveRatio);
 
@@ -331,7 +319,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         internal
     {
         _proxifyFundraisingApps();
-        address collateralToken = _getDeployedContractsTxTwo();
+        address collateralToken = _getStoredAddressesTxTwo();
 
         _initializePresale(
             _goal,
@@ -349,14 +337,14 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     }
 
     function _proxifyFundraisingApps() internal {
-        (Kernel dao,,,,) = _getDeployedContractsTxOne();
+        (Kernel dao,,,,,) = _getStoredAddressesTxOne();
 
         Vault reserveVault = _installVaultApp(dao);
         Presale presale = Presale(_installNonDefaultApp(dao, PRESALE_ID));
         MarketMaker marketMaker = MarketMaker(_installNonDefaultApp(dao, MARKET_MAKER_ID));
         Controller controller = Controller(_installNonDefaultApp(dao, MARKETPLACE_CONTROLLER_ID));
 
-        _storeDeployedContractsTxThree(reserveVault, presale, marketMaker, controller);
+        _storeAddressesTxThree(reserveVault, presale, marketMaker, controller);
     }
 
     function _initializePresale(
@@ -373,11 +361,11 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         internal
     {
         // Accessing deployed contracts directly due to stack too deep error.
-        senderDeployedContracts[msg.sender].presale.initialize(
-            AragonFundraisingController(senderDeployedContracts[msg.sender].controller),
-            TokenManager(senderDeployedContracts[msg.sender].hookedTokenManager),
-            senderDeployedContracts[msg.sender].reserveVault,
-            senderDeployedContracts[msg.sender].fundingPoolVault,
+        senderStoredAddresses[msg.sender].presale.initialize(
+            AragonFundraisingController(senderStoredAddresses[msg.sender].controller),
+            TokenManager(senderStoredAddresses[msg.sender].hookedTokenManager),
+            senderStoredAddresses[msg.sender].reserveVault,
+            senderStoredAddresses[msg.sender].fundingPoolVault,
             _collateralToken,
             _goal,
             _period,
@@ -393,14 +381,14 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     function _initializeMarketMaker(uint256 _buyFeePct, uint256 _sellFeePct) internal {
         IBancorFormula bancorFormula = IBancorFormula(_latestVersionAppBase(BANCOR_FORMULA_ID));
 
-        (,,, Vault beneficiary, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
-        (Vault reserveVault,, MarketMaker marketMaker, Controller controller) = _getDeployedContractsTxThree();
+        (,,, Vault beneficiary, HookedTokenManager hookedTokenManager,) = _getStoredAddressesTxOne();
+        (Vault reserveVault,, MarketMaker marketMaker, Controller controller) = _getStoredAddressesTxThree();
 
         marketMaker.initialize(AragonFundraisingController(controller), TokenManager(hookedTokenManager), bancorFormula, reserveVault, beneficiary, _buyFeePct, _sellFeePct);
     }
 
     function _initializeController(address _collateralToken) internal {
-        (Vault reserveVault, Presale presale, MarketMaker marketMaker, Controller controller) = _getDeployedContractsTxThree();
+        (Vault reserveVault, Presale presale, MarketMaker marketMaker, Controller controller) = _getStoredAddressesTxThree();
         controller.initialize(presale, marketMaker, reserveVault);
     }
 
@@ -413,9 +401,9 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     )
     internal
     {
-        (,, DandelionVoting dandelionVoting,,) = _getDeployedContractsTxOne();
-        (,,, Controller controller) = _getDeployedContractsTxThree();
-        address collateralToken = _getDeployedContractsTxTwo();
+        (,, DandelionVoting dandelionVoting,,, address permissionManager) = _getStoredAddressesTxOne();
+        (,,, Controller controller) = _getStoredAddressesTxThree();
+        address collateralToken = _getStoredAddressesTxTwo();
 
         _createPermissionForTemplate(_acl, address(controller), controller.ADD_COLLATERAL_TOKEN_ROLE());
         controller.addCollateralToken(
@@ -424,7 +412,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
             _virtualBalance,
             _reserveRatio
         );
-        _transferPermissionFromTemplate(_acl, controller, dandelionVoting, controller.ADD_COLLATERAL_TOKEN_ROLE(), dandelionVoting);
+        _transferPermissionFromTemplate(_acl, controller, dandelionVoting, controller.ADD_COLLATERAL_TOKEN_ROLE(), permissionManager);
     }
 
     // Permission setting functions //
@@ -432,6 +420,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     function _createCustomVotingPermissions(ACL _acl, DandelionVoting _dandelionVoting, HookedTokenManager _hookedTokenManager)
         internal
     {
+        (,,,,, address permissionManager) = _getStoredAddressesTxOne();
         _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_QUORUM_ROLE(), permissionManager);
         _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_SUPPORT_ROLE(), permissionManager);
         _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_BUFFER_BLOCKS_ROLE(), permissionManager);
@@ -439,6 +428,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     }
 
     function _createTollgatePermissions(ACL _acl, Tollgate _tollgate, DandelionVoting _dandelionVoting) internal {
+        (,,,,, address permissionManager) = _getStoredAddressesTxOne();
         _acl.createPermission(_dandelionVoting, _tollgate, _tollgate.CHANGE_AMOUNT_ROLE(), permissionManager);
         _acl.createPermission(_dandelionVoting, _tollgate, _tollgate.CHANGE_DESTINATION_ROLE(), permissionManager);
         _acl.createPermission(_tollgate, _dandelionVoting, _dandelionVoting.CREATE_VOTES_ROLE(), permissionManager);
@@ -447,6 +437,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     function _createRedemptionsPermissions(ACL _acl, Redemptions _redemptions, DandelionVoting _dandelionVoting)
         internal
     {
+        (,,,,, address permissionManager) = _getStoredAddressesTxOne();
         _acl.createPermission(ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), address(this));
         _setOracle(_acl, ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), permissionManager);
         _acl.setPermissionManager(_dandelionVoting, _redemptions, _redemptions.REDEEM_ROLE());
@@ -455,31 +446,30 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.REMOVE_TOKEN_ROLE(), permissionManager);
     }
 
-    function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting, DandelionVoting _dandelionVoting)
+    function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting)
         internal
     {
+        (,,,,, address permissionManager) = _getStoredAddressesTxOne();
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), permissionManager);
     }
 
     function _createHookedTokenManagerPermissions() internal {
-        (, ACL acl,,,) = _getDeployedContractsTxOne();
-        (,, DandelionVoting dandelionVoting,, HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
-        (, Presale presale, MarketMaker marketMaker,) = _getDeployedContractsTxThree();
+        (, ACL acl, DandelionVoting dandelionVoting,, HookedTokenManager hookedTokenManager, address permissionManager) = _getStoredAddressesTxOne();
+        (, Presale presale, MarketMaker marketMaker,) = _getStoredAddressesTxThree();
 
         address[] memory grantees = new address[](2);
         grantees[0] = address(marketMaker);
         grantees[1] = address(presale);
         acl.createPermission(marketMaker, hookedTokenManager, hookedTokenManager.MINT_ROLE(), permissionManager);
         acl.createPermission(presale, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), permissionManager);
-        acl.createPermission(presale, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), dandelionVoting);
+        acl.createPermission(presale, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), permissionManager);
         acl.createPermission(presale, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), permissionManager);
         _createPermissions(acl, grantees, hookedTokenManager, hookedTokenManager.BURN_ROLE(), permissionManager);
     }
 
     function _createFundraisingPermissions() internal {
-        (, ACL acl,,,) = _getDeployedContractsTxOne();
-        (,, DandelionVoting dandelionVoting,,) = _getDeployedContractsTxOne();
-        (Vault reserveVault, Presale presale, MarketMaker marketMaker, Controller controller) = _getDeployedContractsTxThree();
+        (, ACL acl, DandelionVoting dandelionVoting,,, address permissionManager) = _getStoredAddressesTxOne();
+        (Vault reserveVault, Presale presale, MarketMaker marketMaker, Controller controller) = _getStoredAddressesTxThree();
 
         // reserveVault
         acl.createPermission(marketMaker, reserveVault, reserveVault.TRANSFER_ROLE(), permissionManager);
@@ -505,60 +495,62 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
 
     // Temporary Storage functions //
 
-    function _storeDeployedContractsTxOne(Kernel _dao, ACL _acl, DandelionVoting _dandelionVoting, Vault _agentOrVault, HookedTokenManager _hookedTokenManager)
+    function _storeAddressesTxOne(Kernel _dao, ACL _acl, DandelionVoting _dandelionVoting, Vault _agentOrVault, HookedTokenManager _hookedTokenManager, address _permissionManager)
         internal
     {
-        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
-        deployedContracts.dao = _dao;
-        deployedContracts.acl = _acl;
-        deployedContracts.dandelionVoting = _dandelionVoting;
-        deployedContracts.fundingPoolVault = _agentOrVault;
-        deployedContracts.hookedTokenManager = _hookedTokenManager;
+        StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
+        addresses.dao = _dao;
+        addresses.acl = _acl;
+        addresses.dandelionVoting = _dandelionVoting;
+        addresses.fundingPoolVault = _agentOrVault;
+        addresses.hookedTokenManager = _hookedTokenManager;
+        addresses.permissionManager = _permissionManager;
     }
 
-    function _getDeployedContractsTxOne() internal returns (Kernel, ACL, DandelionVoting, Vault, HookedTokenManager) {
-        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
+    function _getStoredAddressesTxOne() internal returns (Kernel, ACL, DandelionVoting, Vault, HookedTokenManager, address) {
+        StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
         return (
-            deployedContracts.dao,
-            deployedContracts.acl,
-            deployedContracts.dandelionVoting,
-            deployedContracts.fundingPoolVault,
-            deployedContracts.hookedTokenManager
+            addresses.dao,
+            addresses.acl,
+            addresses.dandelionVoting,
+            addresses.fundingPoolVault,
+            addresses.hookedTokenManager,
+            addresses.permissionManager
         );
     }
 
-    function _storeDeployedContractsTxTwo(address _collateralToken) internal {
-        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
-        deployedContracts.collateralToken = _collateralToken;
+    function _storeAddressesTxTwo(address _collateralToken) internal {
+        StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
+        addresses.collateralToken = _collateralToken;
     }
 
-    function _getDeployedContractsTxTwo() internal returns (address) {
-        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
-        return deployedContracts.collateralToken;
+    function _getStoredAddressesTxTwo() internal returns (address) {
+        StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
+        return addresses.collateralToken;
     }
 
-    function _storeDeployedContractsTxThree(Vault _reserve, Presale _presale, MarketMaker _marketMaker, Controller _controller)
+    function _storeAddressesTxThree(Vault _reserve, Presale _presale, MarketMaker _marketMaker, Controller _controller)
         internal
     {
-        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
-        deployedContracts.reserveVault = _reserve;
-        deployedContracts.presale = _presale;
-        deployedContracts.marketMaker = _marketMaker;
-        deployedContracts.controller = _controller;
+        StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
+        addresses.reserveVault = _reserve;
+        addresses.presale = _presale;
+        addresses.marketMaker = _marketMaker;
+        addresses.controller = _controller;
     }
 
-    function _getDeployedContractsTxThree() internal returns (Vault, Presale, MarketMaker, Controller) {
-        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
+    function _getStoredAddressesTxThree() internal returns (Vault, Presale, MarketMaker, Controller) {
+        StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
         return (
-            deployedContracts.reserveVault,
-            deployedContracts.presale,
-            deployedContracts.marketMaker,
-            deployedContracts.controller
+            addresses.reserveVault,
+            addresses.presale,
+            addresses.marketMaker,
+            addresses.controller
         );
     }
 
     function _deleteStoredContracts() internal {
-        delete senderDeployedContracts[msg.sender];
+        delete senderStoredAddresses[msg.sender];
     }
 
     // Oracle permissions with params functions //
