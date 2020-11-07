@@ -1,4 +1,6 @@
-const { HOLDERS, STAKES } = require('./data/tokenHolders')
+const path = require('path')
+const csv = require('csvtojson')
+
 const GardensTemplate = artifacts.require("GardensTemplate")
 const MiniMeToken = artifacts.require("MiniMeToken")
 const Token = artifacts.require("Token")
@@ -53,8 +55,25 @@ const VOTE_EXECUTION_DELAY_BLOCKS = 24 * HOURS / 5 // 24 hours on xDAI, 8 hours 
 const VOTING_SETTINGS = [SUPPORT_REQUIRED, MIN_ACCEPTANCE_QUORUM, VOTE_DURATION_BLOCKS, VOTE_BUFFER_BLOCKS, VOTE_EXECUTION_DELAY_BLOCKS]
 const USE_AGENT_AS_VAULT = false
 
+// Hatch config
+const HOLDERS_PER_TRANSACTION = 10
+const IMPACT_HOURS_CSV = path.resolve('./ih.csv'); // CSV with two columns: "hatcher address" and "impact hours"
+const IMPACT_HOURS_RATE = 1 * FUNDRAISING_ONE_TOKEN // TESTTEC / IH
+
 // Create dao transaction two config
 const TOLLGATE_FEE = 3 * ONE_TOKEN
+
+const HALFLIFE = 0.5 * DAYS
+const MAX_RATIO = 0.4 // 40 percent
+const MIN_THRESHOLD = 0.005 // 0.5 percent
+const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effective supply
+
+const scale = n => parseInt(n * 10 ** 7)
+const BLOCKTIME = 5 // 15 rinkeby, 13 mainnet, 5 xdai
+const CONVERTED_TIME = HALFLIFE / BLOCKTIME
+const DECAY = 1/2 ** (1 / CONVERTED_TIME) // alpha
+const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD // determine weight based on MAX_RATIO and MIN_THRESHOLD
+const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT), MIN_EFFECTIVE_SUPPLY]
 
 // Create dao transaction three config
 const PRESALE_GOAL = 300 * ONE_TOKEN
@@ -72,20 +91,6 @@ const SELL_FEE_PCT = 0.2 * ONE_HUNDRED_PERCENT
 const VIRTUAL_SUPPLY = 2 // TODO
 const VIRTUAL_BALANCE = 1 // TODO
 const RESERVE_RATIO = 0.1 * FUNDRAISING_ONE_HUNDRED_PERCENT
-
-const scale = n => parseInt(n * 10 ** 7)
-const HALFTIME = 0.5 * DAYS //
-const BLOCKTIME = 15 // 15 rinkeby, 13 mainnet, 5 xdai
-const CONVERTED_TIME = 1/BLOCKTIME * HALFTIME
-const DECAY = 1/2 ** (1/CONVERTED_TIME) // alpha
-const MAX_RATIO = 0.4 // 40 percent
-const MIN_THRESHOLD = 0.005 // 0.5 percent
-const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD // determine weight based on MAX_RATIO and MIN_THRESHOLD
-const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effective supply
-const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT), MIN_EFFECTIVE_SUPPLY]
-
-// Create token holders transaction config
-const HOLDERS_PER_TRANSACTION = 15
 
 module.exports = async (callback) => {
   try {
@@ -126,23 +131,20 @@ module.exports = async (callback) => {
     )
     console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
 
+    const data = await csv({ output: 'csv' }).fromFile(IMPACT_HOURS_CSV)
+    const holders = data.map(value => value[0])
+    const stakes = data.map(value => (value[1] * IMPACT_HOURS_RATE).toString())
+    const total = Math.ceil(holders.length / HOLDERS_PER_TRANSACTION)
     let counter = 1
-    let total = Math.ceil(HOLDERS.length / HOLDERS_PER_TRANSACTION)
-    if (HOLDERS.length === STAKES.length) {
-      for (let i = 0, j = HOLDERS.length; i < j; i += HOLDERS_PER_TRANSACTION) {
-        const txReceipt = await gardensTemplate.createTxTokenHolders(
-          HOLDERS.slice(i, i + HOLDERS_PER_TRANSACTION),
-          STAKES.slice(i, i + HOLDERS_PER_TRANSACTION),
-          OPEN_DATE,
-          VESTING_CLIFF_PERIOD,
-          VESTING_COMPLETE_PERIOD
-        )
-        console.log(`Token Holders Txs: ${counter} of ${total}. Token holders ${i + 1} to ${i + HOLDERS_PER_TRANSACTION} created. Gas fee: ${txReceipt.receipt.gasUsed}`)
-        counter++
-      }
-    }
-    else {
-      console.log('Token Holders Txs skypped: Holders and Stakes length mismatch')
+    for (let i = 0; i < holders.length; i += HOLDERS_PER_TRANSACTION) {
+      const txReceipt = await gardensTemplate.createTxTokenHolders(
+        holders.slice(i, i + HOLDERS_PER_TRANSACTION),
+        stakes.slice(i, i + HOLDERS_PER_TRANSACTION),
+        OPEN_DATE,
+        VESTING_CLIFF_PERIOD,
+        VESTING_COMPLETE_PERIOD
+      )
+      console.log(`Token Holders Txs: ${counter++} of ${total}. Token holders ${i + 1} to ${Math.min(i + HOLDERS_PER_TRANSACTION, holders.length)} created. Gas fee: ${txReceipt.receipt.gasUsed}`)
     }
 
     const createDaoTxThreeReceipt = await gardensTemplate.createDaoTxThree(
