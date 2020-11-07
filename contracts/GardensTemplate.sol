@@ -296,11 +296,11 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         return redemptions;
     }
 
-    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, address _requestToken, uint256[3] _convictionSettings)
+    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, address _requestToken, uint256[4] _convictionSettings)
         internal returns (ConvictionVoting)
     {
         ConvictionVoting convictionVoting = ConvictionVoting(_installNonDefaultApp(_dao, CONVICTION_VOTING_APP_ID));
-        convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2]);
+        convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2], _convictionSettings[3]);
         return convictionVoting;
     }
 
@@ -450,7 +450,9 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         internal
     {
         (,,,,, address permissionManager) = _getStoredAddressesTxOne();
+        _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.UPDATE_SETTINGS_ROLE(), permissionManager);
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), permissionManager);
+        _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CANCEL_PROPOSAL_ROLE(), permissionManager);
     }
 
     function _createHookedTokenManagerPermissions() internal {

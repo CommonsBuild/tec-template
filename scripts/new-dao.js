@@ -81,8 +81,8 @@ const DECAY = 1/2 ** (1/CONVERTED_TIME) // alpha
 const MAX_RATIO = 0.4 // 40 percent
 const MIN_THRESHOLD = 0.005 // 0.5 percent
 const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD // determine weight based on MAX_RATIO and MIN_THRESHOLD
-// const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effective supply
-const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT)]
+const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effective supply
+const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT), MIN_EFFECTIVE_SUPPLY]
 
 // Create token holders transaction config
 const HOLDERS_PER_TRANSACTION = 15
