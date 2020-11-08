@@ -25,6 +25,9 @@ const gardensTemplateAddress = () => {
   } else if (network() === "mainnet") {
     const Arapp = require("../arapp")
     return Arapp.environments.mainnet.address
+  } else if (network() === "xdai") {
+    const Arapp = require("../arapp")
+    return Arapp.environments.xdai.address
   } else {
     const Arapp = require("../arapp_local")
     return Arapp.environments.devnet.address
