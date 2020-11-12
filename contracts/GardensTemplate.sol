@@ -439,7 +439,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     {
         (,,,,, address permissionManager) = _getStoredAddressesTxOne();
         _acl.createPermission(ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), address(this));
-        _setOracle(_acl, ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), permissionManager);
+        _setOracle(_acl, ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), _dandelionVoting);
         _acl.setPermissionManager(_dandelionVoting, _redemptions, _redemptions.REDEEM_ROLE());
 
         _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.ADD_TOKEN_ROLE(), permissionManager);
@@ -491,7 +491,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         acl.createPermission(ANY_ENTITY, controller, controller.CONTRIBUTE_ROLE(), permissionManager);
         acl.createPermission(ANY_ENTITY, controller, controller.MAKE_BUY_ORDER_ROLE(), permissionManager);
         acl.createPermission(ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), address(this));
-        _setOracle(acl, ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), permissionManager);
+        _setOracle(acl, ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), dandelionVoting);
         acl.setPermissionManager(permissionManager, controller, controller.MAKE_SELL_ORDER_ROLE());
     }
 
