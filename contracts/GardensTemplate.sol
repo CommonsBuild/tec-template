@@ -440,7 +440,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         (,,,,, address permissionManager) = _getStoredAddressesTxOne();
         _acl.createPermission(ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), address(this));
         _setOracle(_acl, ANY_ENTITY, _redemptions, _redemptions.REDEEM_ROLE(), _dandelionVoting);
-        _acl.setPermissionManager(_dandelionVoting, _redemptions, _redemptions.REDEEM_ROLE());
+        _acl.setPermissionManager(permissionManager, _redemptions, _redemptions.REDEEM_ROLE());
 
         _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.ADD_TOKEN_ROLE(), permissionManager);
         _acl.createPermission(_dandelionVoting, _redemptions, _redemptions.REMOVE_TOKEN_ROLE(), permissionManager);
@@ -449,8 +449,8 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting)
         internal
     {
-        (,,,,, address permissionManager) = _getStoredAddressesTxOne();
-        _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.UPDATE_SETTINGS_ROLE(), permissionManager);
+        (,, DandelionVoting dandelionVoting,,, address permissionManager) = _getStoredAddressesTxOne();
+        _acl.createPermission(dandelionVoting, _convictionVoting, _convictionVoting.UPDATE_SETTINGS_ROLE(), permissionManager);
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), permissionManager);
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CANCEL_PROPOSAL_ROLE(), permissionManager);
     }

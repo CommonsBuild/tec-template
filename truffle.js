@@ -80,8 +80,8 @@ module.exports = {
     xdai: {
       network_id: 100,
       provider: providerForNetwork('xdai'),
-      gas: 95e5,
-      gasPrice: 1000000000
+      gas: 99e5,
+      gasPrice: 1100000000
     },
     kovan: {
       network_id: 42,

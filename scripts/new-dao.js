@@ -2,21 +2,16 @@ const path = require('path')
 const csv = require('csvtojson')
 
 const GardensTemplate = artifacts.require("GardensTemplate")
-const MiniMeToken = artifacts.require("MiniMeToken")
-const Token = artifacts.require("Token")
 
 const DAO_ID = "testtec" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
 const NETWORK_ARG = "--network"
 const DAO_ID_ARG = "--daoid"
-const NON_MINIME_COLLATERAL = "--nonminime"
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-const TOKEN_OWNER = "0xDc2aDfA800a1ffA16078Ef8C1F251D50DcDa1065"
 
 const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.argv[process.argv.indexOf(arg) + 1] : defaultValue
 
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
-const nonMiniMeCollateral = () => argValue(NON_MINIME_COLLATERAL, false)
 
 const gardensTemplateAddress = () => {
   if (network() === "rinkeby") {
@@ -50,11 +45,7 @@ console.log(`Every ${BLOCKTIME}s a new block is mined in ${network()}.`)
 // CONFIGURATION
 
 // Collateral Token is used to pay contributors and held in the bonding curve reserve
-const COLLATERAL_TOKEN_NAME = "Test DAI"
-const COLLATERAL_TOKEN_SYMBOL = "tDAI"
-const COLLATERAL_TOKEN_DECIMALS = 18
-const COLLATERAL_TOKEN_TRANSFERS_ENABLED = true
-const COLLATERAL_BALANCE = 10e23
+const COLLATERAL_TOKEN = '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d' // wxDAI
 
 // Org Token represents membership in the community and influence in proposals
 const ORG_TOKEN_NAME = "Token Engineering Commons TEST Token"
@@ -85,7 +76,7 @@ const MIN_EFFECTIVE_SUPPLY = 0.0025 * ONE_HUNDRED_PERCENT // 0.25% minimum effec
 // # Hatch settings
 
 // How many tokens required to initialize the bonding curve
-const PRESALE_GOAL = 300 * ONE_TOKEN
+const PRESALE_GOAL = 100 * ONE_TOKEN
 // How long should the presale period last for
 const PRESALE_PERIOD = 7 * DAYS
 // How many organization tokens per collateral token should be minted
@@ -105,7 +96,7 @@ const OPEN_DATE = 0
 // CSV with two columns: "hatcher address" and "impact hours"
 const IMPACT_HOURS_CSV = path.resolve('./ih.csv'); 
 // Ratio received organization tokens / impact hours
-const IMPACT_HOURS_RATE = 1 * FUNDRAISING_ONE_TOKEN
+const IMPACT_HOURS_RATE = 100 * FUNDRAISING_ONE_TOKEN
 
 // # Marketplace Bonding Curve Parameterization
 
@@ -126,30 +117,13 @@ const VIRTUAL_BALANCE = 1
 module.exports = async (callback) => {
   try {
     const gardensTemplate = await GardensTemplate.at(gardensTemplateAddress())
-    let collateralToken
-
-    if (nonMiniMeCollateral()) {
-      collateralToken = await Token.new(TOKEN_OWNER, COLLATERAL_TOKEN_NAME, COLLATERAL_TOKEN_SYMBOL)
-    } else {
-      collateralToken = await MiniMeToken.new(
-        ZERO_ADDRESS,
-        ZERO_ADDRESS,
-        0,
-        COLLATERAL_TOKEN_NAME,
-        COLLATERAL_TOKEN_DECIMALS,
-        COLLATERAL_TOKEN_SYMBOL,
-        COLLATERAL_TOKEN_TRANSFERS_ENABLED
-      )
-      await collateralToken.generateTokens(TOKEN_OWNER, COLLATERAL_BALANCE)
-    }
-    console.log(`Created ${COLLATERAL_TOKEN_SYMBOL} Token: ${collateralToken.address}`)
 
     const createDaoTxOneReceipt = await gardensTemplate.createDaoTxOne(
       ORG_TOKEN_NAME,
       ORG_TOKEN_SYMBOL,
       VOTING_SETTINGS,
       USE_AGENT_AS_VAULT,
-      TOKEN_OWNER
+      ZERO_ADDRESS
     )
     console.log(`Tx One Complete. DAO address: ${createDaoTxOneReceipt.logs.find(x => x.event === "DeployDao").args.dao} Gas used: ${createDaoTxOneReceipt.receipt.gasUsed} `)
     
@@ -160,11 +134,11 @@ module.exports = async (callback) => {
     const CONVICTION_SETTINGS = [scale(DECAY), scale(MAX_RATIO), scale(WEIGHT), MIN_EFFECTIVE_SUPPLY]
 
     const createDaoTxTwoReceipt = await gardensTemplate.createDaoTxTwo(
-      collateralToken.address,
+      COLLATERAL_TOKEN,
       TOLLGATE_FEE,
-      [collateralToken.address],
+      [COLLATERAL_TOKEN],
       CONVICTION_SETTINGS,
-      collateralToken.address
+      COLLATERAL_TOKEN
     )
     console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
 
