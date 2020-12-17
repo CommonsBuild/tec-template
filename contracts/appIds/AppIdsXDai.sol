@@ -13,4 +13,5 @@ contract AppIdsXDai is APMNamehash {
     bytes32 public constant PRESALE_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("marketplace-presale"))); // marketplace-presale.open.aragonpm.eth
     bytes32 public constant MARKET_MAKER_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("marketplace-bancor-market-maker"))); // marketplace-bancor-market-maker.open.aragonpm.eth
     bytes32 public constant MARKETPLACE_CONTROLLER_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("marketplace-controller"))); // marketplace-controller.open.aragonpm.eth
+    bytes32 public constant HATCH_ORACLE_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("hatch-oracle"))); //  hatch-oracle.open.aragonpm.eth
 }

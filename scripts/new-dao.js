@@ -38,6 +38,7 @@ const ONE_TOKEN = 1e18
 const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
 const FUNDRAISING_ONE_TOKEN = 1e18
 const HOLDERS_PER_TRANSACTION = 10
+const PPM = 1000000
 
 const BLOCKTIME = network() === "rinkeby" ? 15 : network() === "mainnet" ? 13 : 5 // 15 rinkeby, 13 mainnet, 5 xdai
 console.log(`Every ${BLOCKTIME}s a new block is mined in ${network()}.`)
@@ -50,6 +51,15 @@ const COLLATERAL_TOKEN = '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d' // wxDAI
 // Org Token represents membership in the community and influence in proposals
 const ORG_TOKEN_NAME = "Token Engineering Commons TEST Token"
 const ORG_TOKEN_SYMBOL = "TESTTEC"
+
+// # Hatch Oracle Settings
+
+// Score membership token is used to check how much members can contribute to the hatch
+const SCORE_TOKEN = '0xc4fbe68522ba81a28879763c3ee33e08b13c499e' // CSTK Token on xDai
+const SCORE_ONE_TOKEN = 1e0
+// Ratio contribution tokens allowed per score membership token
+const HATCH_ORACLE_RATIO = 0.005 * PPM * FUNDRAISING_ONE_TOKEN / SCORE_ONE_TOKEN
+
 
 // # Dandelion Voting Settings
 
@@ -176,7 +186,9 @@ module.exports = async (callback) => {
       daoId(),
       VIRTUAL_SUPPLY,
       VIRTUAL_BALANCE,
-      RESERVE_RATIO
+      RESERVE_RATIO,
+      SCORE_TOKEN,
+      HATCH_ORACLE_RATIO
     )
     console.log(`Tx Four Complete. Gas used: ${createDaoTxFourReceipt.receipt.gasUsed}`)
 
