@@ -243,7 +243,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         string _id,
         uint256 _virtualSupply,
         uint256 _virtualBalance,
-        uint32 _reserveRatio
+        uint32 _reserveRatio,
         address _scoreToken,
         uint256 _hatchOracleRatio
     )

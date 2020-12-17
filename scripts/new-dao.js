@@ -38,6 +38,7 @@ const ONE_TOKEN = 1e18
 const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
 const FUNDRAISING_ONE_TOKEN = 1e18
 const HOLDERS_PER_TRANSACTION = 10
+const PPM = 1000000
 
 const BLOCKTIME = network() === "rinkeby" ? 15 : network() === "mainnet" ? 13 : 5 // 15 rinkeby, 13 mainnet, 5 xdai
 console.log(`Every ${BLOCKTIME}s a new block is mined in ${network()}.`)
