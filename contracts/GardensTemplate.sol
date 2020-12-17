@@ -12,6 +12,7 @@ import {IConvictionVoting as ConvictionVoting} from "./external/IConvictionVotin
 import {ITollgate as Tollgate} from "./external/ITollgate.sol";
 import {IBancorMarketMaker as MarketMaker} from "./external/IBancorMarketMaker.sol";
 import {IAragonFundraisingController as Controller} from "./external/IAragonFundraisingController.sol";
+import {IHatchOracle as HatchOracle} from "./external/IHatchOracle.sol";
 import "./appIds/AppIdsXDai.sol";
 
 contract GardensTemplate is BaseTemplate, AppIdsXDai {
@@ -79,6 +80,7 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         (Kernel dao, ACL acl) = _createDAO();
         MiniMeToken voteToken = _createToken(_voteTokenName, _voteTokenSymbol, TOKEN_DECIMALS);
         Vault fundingPoolVault = _useAgentAsVault ? _installDefaultAgentApp(dao) : _installVaultApp(dao);
+
         DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
@@ -229,26 +231,36 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
     }
 
     /**
-    * @dev Configure the fundraising collateral and finalise permissions
+    * @dev Configure the fundraising collateral, install the hatch oracle and finalise permissions
     * @param _id Unique Aragon DAO ID
     * @param _virtualSupply Collateral token virtual supply in wei
     * @param _virtualBalance Collateral token virtual balance in wei
     * @param _reserveRatio The reserve ratio to be used for the collateral token in PPM
+    * @param _scoreToken The membership score token address
+    * @param _hatchOracleRatio Hatch oracle ratio between the contribution and membership score
     */
     function createDaoTxFour(
         string _id,
         uint256 _virtualSupply,
         uint256 _virtualBalance,
         uint32 _reserveRatio
+        address _scoreToken,
+        uint256 _hatchOracleRatio
     )
         public
     {
         require(senderStoredAddresses[msg.sender].reserveVault != address(0), ERROR_NO_CACHE);
 
         _validateId(_id);
-        (Kernel dao, ACL acl, DandelionVoting dandelionVoting,,,) = _getStoredAddressesTxOne();
+        (Kernel dao, ACL acl, DandelionVoting dandelionVoting,,, address permissionManager) = _getStoredAddressesTxOne();
+        (, Presale presale,, Controller controller) = _getStoredAddressesTxThree();
 
         _setupCollateralToken(dao, acl, _virtualSupply, _virtualBalance, _reserveRatio);
+
+        HatchOracle hatchOracle = _installHatchOracleApp(dao, _scoreToken, _hatchOracleRatio, address(presale));
+
+        _setOracle(acl, ANY_ENTITY, controller, controller.CONTRIBUTE_ROLE(), hatchOracle);
+        acl.setPermissionManager(permissionManager, controller, controller.CONTRIBUTE_ROLE());
 
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, dandelionVoting);
         _registerID(_id, dao);
@@ -269,6 +281,14 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         _token.changeController(hookedTokenManager);
         hookedTokenManager.initialize(_token, _transferable, _maxAccountTokens);
         return hookedTokenManager;
+    }
+
+    function _installHatchOracleApp(Kernel _dao, address _scoreToken, uint256 _oracleRatio, address _hatch)
+        internal returns(HatchOracle)
+    {
+        HatchOracle hatchOracle = HatchOracle(_installNonDefaultApp(_dao, HATCH_ORACLE_ID));
+        hatchOracle.initialize(_scoreToken, _oracleRatio, _hatch);
+        return hatchOracle;
     }
 
     function _installDandelionVotingApp(Kernel _dao, MiniMeToken _voteToken, uint64[5] _votingSettings)
@@ -488,8 +508,12 @@ contract GardensTemplate is BaseTemplate, AppIdsXDai {
         acl.createPermission(dandelionVoting, controller, controller.UPDATE_COLLATERAL_TOKEN_ROLE(), permissionManager);
         acl.createPermission(ANY_ENTITY, controller, controller.OPEN_PRESALE_ROLE(), permissionManager);
         acl.createPermission(presale, controller, controller.OPEN_TRADING_ROLE(), permissionManager);
-        acl.createPermission(ANY_ENTITY, controller, controller.CONTRIBUTE_ROLE(), permissionManager);
+
+        acl.createPermission(ANY_ENTITY, controller, controller.CONTRIBUTE_ROLE(), this);
+        // We'll set a hatch oracle on the fourth transaction 
+
         acl.createPermission(ANY_ENTITY, controller, controller.MAKE_BUY_ORDER_ROLE(), permissionManager);
+
         acl.createPermission(ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), address(this));
         _setOracle(acl, ANY_ENTITY, controller, controller.MAKE_SELL_ORDER_ROLE(), dandelionVoting);
         acl.setPermissionManager(permissionManager, controller, controller.MAKE_SELL_ORDER_ROLE());

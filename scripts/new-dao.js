@@ -51,6 +51,15 @@ const COLLATERAL_TOKEN = '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d' // wxDAI
 const ORG_TOKEN_NAME = "Token Engineering Commons TEST Token"
 const ORG_TOKEN_SYMBOL = "TESTTEC"
 
+// # Hatch Oracle Settings
+
+// Score membership token is used to check how much members can contribute to the hatch
+const SCORE_TOKEN = '0xc4fbe68522ba81a28879763c3ee33e08b13c499e' // CSTK Token on xDai
+const SCORE_ONE_TOKEN = 1e0
+// Ratio contribution tokens allowed per score membership token
+const HATCH_ORACLE_RATIO = 0.005 * PPM * FUNDRAISING_ONE_TOKEN / SCORE_ONE_TOKEN
+
+
 // # Dandelion Voting Settings
 
 // Used for administrative or binary choice decisions with ragequit-like functionality
@@ -176,7 +185,9 @@ module.exports = async (callback) => {
       daoId(),
       VIRTUAL_SUPPLY,
       VIRTUAL_BALANCE,
-      RESERVE_RATIO
+      RESERVE_RATIO,
+      SCORE_TOKEN,
+      HATCH_ORACLE_RATIO
     )
     console.log(`Tx Four Complete. Gas used: ${createDaoTxFourReceipt.receipt.gasUsed}`)
 
