@@ -49,8 +49,8 @@ console.log(`Every ${BLOCKTIME}s a new block is mined in ${network()}.`)
 const COLLATERAL_TOKEN = '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d' // wxDAI
 
 // Org Token represents membership in the community and influence in proposals
-const ORG_TOKEN_NAME = "Token Engineering Commons TEST Token"
-const ORG_TOKEN_SYMBOL = "TESTTEC"
+const ORG_TOKEN_NAME = "Token Engineering Commons TEST Hatch Token"
+const ORG_TOKEN_SYMBOL = "TESTTECH"
 
 // # Hatch Oracle Settings
 
