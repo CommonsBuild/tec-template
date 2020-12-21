@@ -14,13 +14,12 @@ const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
 
 const hatchTemplateAddress = () => {
-  return "0xeE7Fb6a47192E3Db29b2b849E77be32987dCBe1D"
+  return "0xcf9bef3213f1385e94d38bd5a322a15c85bbc498"
 }
 
 // Helpers, no need to change
 const HOURS = 60 * 60
 const DAYS = 24 * HOURS
-const WEEKS = 7 * DAYS
 const ONE_HUNDRED_PERCENT = 1e18
 const ONE_TOKEN = 1e18
 const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
@@ -59,25 +58,23 @@ const VOTE_EXECUTION_DELAY_BLOCKS = 24 * HOURS / BLOCKTIME
 const VOTING_SETTINGS = [SUPPORT_REQUIRED, MIN_ACCEPTANCE_QUORUM, VOTE_DURATION_BLOCKS, VOTE_BUFFER_BLOCKS, VOTE_EXECUTION_DELAY_BLOCKS]
 // Set the fee paid to the org to create an administrative vote
 const TOLLGATE_FEE = 3 * ONE_TOKEN
-// If you want to use the Agent instead of the vault allowing the community to interact with external contracts
-const USE_AGENT_AS_VAULT = true
 
 // # Hatch settings
 
 // How many tokens required to initialize the bonding curve
-const PRESALE_MIN_GOAL = 0.5 * ONE_TOKEN
-const PRESALE_MAX_GOAL = 1 * ONE_TOKEN
-// How long should the presale period last for
-const PRESALE_PERIOD = 7 * DAYS
+const HATCH_MIN_GOAL = 0.5 * ONE_TOKEN
+const HATCH_MAX_GOAL = 1 * ONE_TOKEN
+// How long should the hatch period last for
+const HATCH_PERIOD = 7 * DAYS
 // How many organization tokens per collateral token should be minted
-const PRESALE_EXCHANGE_RATE = 0.00000001 * FUNDRAISING_ONE_TOKEN
+const HATCH_EXCHANGE_RATE = 0.00000001 * FUNDRAISING_ONE_TOKEN
 // When is the cliff for vesting restrictions
-const VESTING_CLIFF_PERIOD = PRESALE_PERIOD + 1 * HOURS // 1 hour after presale
+const VESTING_CLIFF_PERIOD = HATCH_PERIOD + 1 * HOURS // 1 hour after hatch
 // When will pre-sale contributors be fully vested
-const VESTING_COMPLETE_PERIOD = VESTING_CLIFF_PERIOD + 1 * HOURS // 2 hours after presale
-const PRESALE_PERCENT_SUPPLY_OFFERED = FUNDRAISING_ONE_HUNDRED_PERCENT
+const VESTING_COMPLETE_PERIOD = VESTING_CLIFF_PERIOD + 1 * HOURS // 2 hours after hatch
+const HATCH_PERCENT_SUPPLY_OFFERED = FUNDRAISING_ONE_HUNDRED_PERCENT
 // What percentage of pre-sale contributions should go to the common pool (versus the reserve)
-const PRESALE_PERCENT_FUNDING_FOR_BENEFICIARY = 0.35 * FUNDRAISING_ONE_HUNDRED_PERCENT
+const HATCH_PERCENT_FUNDING_FOR_BENEFICIARY = 0.35 * FUNDRAISING_ONE_HUNDRED_PERCENT
 // when should the pre-sale be open, setting 0 will allow anyone to open the pre-sale anytime after deployment
 const OPEN_DATE = 0
 
@@ -89,7 +86,6 @@ module.exports = async (callback) => {
       ORG_TOKEN_NAME,
       ORG_TOKEN_SYMBOL,
       VOTING_SETTINGS,
-      USE_AGENT_AS_VAULT,
       ZERO_ADDRESS
     )
     console.log(`Tx One Complete. DAO address: ${createDaoTxOneReceipt.logs.find(x => x.event === "DeployDao").args.dao} Gas used: ${createDaoTxOneReceipt.receipt.gasUsed} `)
@@ -97,20 +93,19 @@ module.exports = async (callback) => {
     const createDaoTxTwoReceipt = await hatchTemplate.createDaoTxTwo(
       COLLATERAL_TOKEN,
       TOLLGATE_FEE,
-      [COLLATERAL_TOKEN],
       COLLATERAL_TOKEN
     )
     console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
 
     const createDaoTxThreeReceipt = await hatchTemplate.createDaoTxThree(
-      PRESALE_MIN_GOAL,
-      PRESALE_MAX_GOAL,
-      PRESALE_PERIOD,
-      PRESALE_EXCHANGE_RATE,
+      HATCH_MIN_GOAL,
+      HATCH_MAX_GOAL,
+      HATCH_PERIOD,
+      HATCH_EXCHANGE_RATE,
       VESTING_CLIFF_PERIOD,
       VESTING_COMPLETE_PERIOD,
-      PRESALE_PERCENT_SUPPLY_OFFERED,
-      PRESALE_PERCENT_FUNDING_FOR_BENEFICIARY,
+      HATCH_PERCENT_SUPPLY_OFFERED,
+      HATCH_PERCENT_FUNDING_FOR_BENEFICIARY,
       OPEN_DATE,
       SCORE_TOKEN,
       HATCH_ORACLE_RATIO
@@ -118,7 +113,8 @@ module.exports = async (callback) => {
     console.log(`Tx Three Complete. Gas used: ${createDaoTxThreeReceipt.receipt.gasUsed}`)
 
     const createDaoTxFourReceipt = await hatchTemplate.createDaoTxFour(
-      daoId()
+      daoId(),
+      [COLLATERAL_TOKEN]
     )
     console.log(`Tx Four Complete. Gas used: ${createDaoTxFourReceipt.receipt.gasUsed}`)
 

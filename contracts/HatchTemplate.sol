@@ -32,11 +32,11 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         Kernel dao;
         ACL acl;
         DandelionVoting dandelionVoting;
-        Vault fundingPoolVault;
+        Agent fundingPoolAgent;
         HookedTokenManager hookedTokenManager;
         address permissionManager;
         address collateralToken;
-        Vault reserveVault;
+        Agent reserveAgent;
         Hatch hatch;
     }
 
@@ -57,13 +57,11 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
     * @param _voteTokenName The name for the token used by share holders in the organization
     * @param _voteTokenSymbol The symbol for the token used by share holders in the organization
     * @param _votingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration, voteBufferBlocks, voteExecutionDelayBlocks] to set up the voting app of the organization
-    * @param _useAgentAsVault Whether to use an Agent app or Vault app
     */
     function createDaoTxOne(
         string _voteTokenName,
         string _voteTokenSymbol,
         uint64[5] _votingSettings,
-        bool _useAgentAsVault,
         address _permissionManager
     )
         public
@@ -72,7 +70,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
 
         (Kernel dao, ACL acl) = _createDAO();
         MiniMeToken voteToken = _createToken(_voteTokenName, _voteTokenSymbol, TOKEN_DECIMALS);
-        Vault fundingPoolVault = _useAgentAsVault ? _installDefaultAgentApp(dao) : _installVaultApp(dao);
+        Agent fundingPoolAgent = _installDefaultAgentApp(dao);
 
         DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
@@ -81,26 +79,23 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
             _permissionManager = address(dandelionVoting);
         }
 
-        if (_useAgentAsVault) {
-            _createAgentPermissions(acl, Agent(fundingPoolVault), dandelionVoting, _permissionManager);
-        }
+        _createAgentPermissions(acl, Agent(fundingPoolAgent), dandelionVoting, _permissionManager);
+
         _createEvmScriptsRegistryPermissions(acl, dandelionVoting, _permissionManager);
         _createCustomVotingPermissions(acl, dandelionVoting, hookedTokenManager);
 
-        _storeAddressesTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager, _permissionManager);
+        _storeAddressesTxOne(dao, acl, dandelionVoting, fundingPoolAgent, hookedTokenManager, _permissionManager);
     }
 
     /**
     * @dev Add and initialise tollgate, redemptions and conviction voting or finance apps
     * @param _tollgateFeeToken The token used to pay the tollgate fee
     * @param _tollgateFeeAmount The tollgate fee amount
-    * @param _redeemableTokens Array of initially redeemable tokens
     * @param _collateralToken Token distributed by conviction voting and used as collateral in fundraising
     */
     function createDaoTxTwo(
         ERC20 _tollgateFeeToken,
         uint256 _tollgateFeeAmount,
-        address[] _redeemableTokens,
         address _collateralToken
     )
         public
@@ -112,15 +107,12 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         (,
         ACL acl,
         DandelionVoting dandelionVoting,
-        Vault fundingPoolVault,
+        Agent fundingPoolAgent,
         HookedTokenManager hookedTokenManager,
         address permissionManager) = _getStoredAddressesTxOne();
 
-        Tollgate tollgate = _installTollgate(senderStoredAddresses[msg.sender].dao, _tollgateFeeToken, _tollgateFeeAmount, address(fundingPoolVault));
+        Tollgate tollgate = _installTollgate(senderStoredAddresses[msg.sender].dao, _tollgateFeeToken, _tollgateFeeAmount, address(fundingPoolAgent));
         _createTollgatePermissions(acl, tollgate, dandelionVoting);
-
-        Redemptions redemptions = _installRedemptions(senderStoredAddresses[msg.sender].dao, fundingPoolVault, hookedTokenManager, _redeemableTokens);
-        _createRedemptionsPermissions(acl, redemptions, dandelionVoting);
 
         _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
         hookedTokenManager.registerHook(dandelionVoting);
@@ -179,16 +171,20 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
     /**
     * @dev Configure the fundraising collateral, install the hatch oracle and finalise permissions
     * @param _id Unique Aragon DAO ID
+    * @param _redeemableTokens Array of initially redeemable tokens
     */
     function createDaoTxFour(
-        string _id
+        string _id,
+        address[] _redeemableTokens
     )
         public
     {
-        require(senderStoredAddresses[msg.sender].reserveVault != address(0), ERROR_NO_CACHE);
+        (Kernel dao, ACL acl, DandelionVoting dandelionVoting,, HookedTokenManager hookedTokenManager,) = _getStoredAddressesTxOne();
+        require(senderStoredAddresses[msg.sender].reserveAgent != address(0), ERROR_NO_CACHE);
+        Redemptions redemptions = _installRedemptions(senderStoredAddresses[msg.sender].dao, senderStoredAddresses[msg.sender].reserveAgent, hookedTokenManager, _redeemableTokens);
+        _createRedemptionsPermissions(acl, redemptions, dandelionVoting);
 
         _validateId(_id);
-        (Kernel dao,, DandelionVoting dandelionVoting,,,) = _getStoredAddressesTxOne();
 
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, dandelionVoting);
         _registerID(_id, dao);
@@ -236,11 +232,11 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         return tollgate;
     }
 
-    function _installRedemptions(Kernel _dao, Vault _agentOrVault, HookedTokenManager _hookedTokenManager, address[] _redeemableTokens)
+    function _installRedemptions(Kernel _dao, Agent _agent, HookedTokenManager _hookedTokenManager, address[] _redeemableTokens)
         internal returns (Redemptions)
     {
         Redemptions redemptions = Redemptions(_installNonDefaultApp(_dao, REDEMPTIONS_APP_ID));
-        redemptions.initialize(_agentOrVault, TokenManager(_hookedTokenManager), _redeemableTokens);
+        redemptions.initialize(_agent, TokenManager(_hookedTokenManager), _redeemableTokens);
         return redemptions;
     }
 
@@ -259,10 +255,10 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
     {
         
         (Kernel dao,,,,,) = _getStoredAddressesTxOne();
-        Vault reserveVault = _installVaultApp(dao);
+        Agent reserveAgent = _installNonDefaultAgentApp(dao);
         Hatch hatch = Hatch(_installNonDefaultApp(dao, HATCH_ID));
 
-        _storeAddressesTxThree(reserveVault, hatch);
+        _storeAddressesTxThree(reserveAgent, hatch);
         address collateralToken = _getStoredAddressesTxTwo();
 
         _initializeHatch(
@@ -298,8 +294,8 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         // Accessing deployed contracts directly due to stack too deep error.
         senderStoredAddresses[msg.sender].hatch.initialize(
             TokenManager(senderStoredAddresses[msg.sender].hookedTokenManager),
-            senderStoredAddresses[msg.sender].reserveVault,
-            senderStoredAddresses[msg.sender].fundingPoolVault,
+            senderStoredAddresses[msg.sender].reserveAgent,
+            senderStoredAddresses[msg.sender].fundingPoolAgent,
             _collateralToken,
             _minGoal,
             _maxGoal,
@@ -356,7 +352,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
 
     function _createHatchPermissions(HatchOracle _hatchOracle) internal {
         (, ACL acl, DandelionVoting dandelionVoting,,, address permissionManager) = _getStoredAddressesTxOne();
-        (Vault reserveVault, Hatch hatch) = _getStoredAddressesTxThree();
+        (Agent reserveAgent, Hatch hatch) = _getStoredAddressesTxThree();
 
         acl.createPermission(ANY_ENTITY, hatch, hatch.OPEN_ROLE(), permissionManager);
         acl.createPermission(ANY_ENTITY, hatch, hatch.CONTRIBUTE_ROLE(), this);
@@ -366,25 +362,25 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
 
     // Temporary Storage functions //
 
-    function _storeAddressesTxOne(Kernel _dao, ACL _acl, DandelionVoting _dandelionVoting, Vault _agentOrVault, HookedTokenManager _hookedTokenManager, address _permissionManager)
+    function _storeAddressesTxOne(Kernel _dao, ACL _acl, DandelionVoting _dandelionVoting, Agent _agent, HookedTokenManager _hookedTokenManager, address _permissionManager)
         internal
     {
         StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
         addresses.dao = _dao;
         addresses.acl = _acl;
         addresses.dandelionVoting = _dandelionVoting;
-        addresses.fundingPoolVault = _agentOrVault;
+        addresses.fundingPoolAgent = _agent;
         addresses.hookedTokenManager = _hookedTokenManager;
         addresses.permissionManager = _permissionManager;
     }
 
-    function _getStoredAddressesTxOne() internal returns (Kernel, ACL, DandelionVoting, Vault, HookedTokenManager, address) {
+    function _getStoredAddressesTxOne() internal returns (Kernel, ACL, DandelionVoting, Agent, HookedTokenManager, address) {
         StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
         return (
             addresses.dao,
             addresses.acl,
             addresses.dandelionVoting,
-            addresses.fundingPoolVault,
+            addresses.fundingPoolAgent,
             addresses.hookedTokenManager,
             addresses.permissionManager
         );
@@ -400,18 +396,18 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         return addresses.collateralToken;
     }
 
-    function _storeAddressesTxThree(Vault _reserve, Hatch _hatch)
+    function _storeAddressesTxThree(Agent _reserve, Hatch _hatch)
         internal
     {
         StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
-        addresses.reserveVault = _reserve;
+        addresses.reserveAgent = _reserve;
         addresses.hatch = _hatch;
     }
 
-    function _getStoredAddressesTxThree() internal returns (Vault, Hatch) {
+    function _getStoredAddressesTxThree() internal returns (Agent, Hatch) {
         StoredAddresses storage addresses = senderStoredAddresses[msg.sender];
         return (
-            addresses.reserveVault,
+            addresses.reserveAgent,
             addresses.hatch
         );
     }
