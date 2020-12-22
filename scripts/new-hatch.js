@@ -58,33 +58,34 @@ const TOLLGATE_FEE = 3 * ONE_TOKEN
 
 // # Hatch settings
 
-// How many tokens required to initialize the bonding curve
-const HATCH_MIN_GOAL = 0.5 * ONE_TOKEN
-const HATCH_MAX_GOAL = 1 * ONE_TOKEN
-// How long should the hatch period last for
-const HATCH_PERIOD = 7 * DAYS
-// How many organization tokens per collateral token should be minted
+// How many COLLATERAL_TOKEN's are required to Hatch
+const HATCH_MIN_GOAL = 5 * ONE_TOKEN
+// What is the Max number of COLLATERAL_TOKEN's the Hatch can recieve
+const HATCH_MAX_GOAL = 1000 * ONE_TOKEN
+// How long should the hatch period last
+const HATCH_PERIOD = 15 * DAYS
+// How many organization tokens should be minted per collateral token 
 const HATCH_EXCHANGE_RATE = 0.00000001 * FUNDRAISING_ONE_TOKEN
-// When is the cliff for vesting restrictions
+// When does the cliff for vesting restrictions end 
 const VESTING_CLIFF_PERIOD = HATCH_PERIOD + 1 // 1 second after hatch
-// When will pre-sale contributors be fully vested
+// When will the Hatchers be fully vested and able to use the redemptions app
 const VESTING_COMPLETE_PERIOD = VESTING_CLIFF_PERIOD + 1 // 2 seconds after hatch
 const HATCH_PERCENT_SUPPLY_OFFERED = FUNDRAISING_ONE_HUNDRED_PERCENT
-// What percentage of pre-sale contributions should go to the common pool (versus the reserve)
-const HATCH_PERCENT_FUNDING_FOR_BENEFICIARY = 0.35 * FUNDRAISING_ONE_HUNDRED_PERCENT
-// when should the pre-sale be open, setting 0 will allow anyone to open the pre-sale anytime after deployment
+// What percentage of Hatch contributions should go to the Funding Pool and therefore be non refundable
+const HATCH_PERCENT_FUNDING_FOR_BENEFICIARY = 0.05 * FUNDRAISING_ONE_HUNDRED_PERCENT
+// when should the Hatch open, setting 0 will allow anyone to open the Hatch anytime after deployment
 const OPEN_DATE = 0
 
 // # Impact hours settings
 
 // CSV with two columns: "hatcher address" and "impact hours"
-const IMPACT_HOURS_CSV = path.resolve('./ih.csv');
+const IMPACT_HOURS_CSV = path.resolve('./ih.csv'); // total IH in this test is the sum of the IH in this CSV
 // How much precision IH have, we usually use 3 decimals
 const IMPACT_HOUR_DECIMALS = 3
-// Max theoretical rate per impact hour
-const MAX_IH_RATE = 1 * ONE_TOKEN
-// Expected raise per impact hour
-const EXPECTED_RAISE_PER_IH = 0.01 * ONE_TOKEN / 10 ** IMPACT_HOUR_DECIMALS
+// Max theoretical rate per impact hour in Collateral_token per IH
+const MAX_IH_RATE = .01 * ONE_TOKEN
+// How much will we need to raise to reach 1/2 of the MAX_IH_RATE divided by total IH
+const EXPECTED_RAISE_PER_IH = .012 * ONE_TOKEN / 10 ** IMPACT_HOUR_DECIMALS
 
 module.exports = async (callback) => {
   try {
