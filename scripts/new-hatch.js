@@ -59,20 +59,20 @@ const TOLLGATE_FEE = 3 * ONE_TOKEN
 // # Hatch settings
 
 // How many tokens required to initialize the bonding curve
-const HATCH_MIN_GOAL = 0.5 * ONE_TOKEN
-const HATCH_MAX_GOAL = 1 * ONE_TOKEN
+const HATCH_MIN_GOAL = 5 * ONE_TOKEN
+const HATCH_MAX_GOAL = 1000 * ONE_TOKEN
 // How long should the hatch period last for
-const HATCH_PERIOD = 7 * DAYS
+const HATCH_PERIOD = 15 * DAYS
 // How many organization tokens per collateral token should be minted
 const HATCH_EXCHANGE_RATE = 0.00000001 * FUNDRAISING_ONE_TOKEN
-// When is the cliff for vesting restrictions
+// When does the cliff for vesting restrictions end 
 const VESTING_CLIFF_PERIOD = HATCH_PERIOD + 1 // 1 second after hatch
-// When will pre-sale contributors be fully vested
+// When will the Hatchers be fully vested
 const VESTING_COMPLETE_PERIOD = VESTING_CLIFF_PERIOD + 1 // 2 seconds after hatch
 const HATCH_PERCENT_SUPPLY_OFFERED = FUNDRAISING_ONE_HUNDRED_PERCENT
-// What percentage of pre-sale contributions should go to the common pool (versus the reserve)
-const HATCH_PERCENT_FUNDING_FOR_BENEFICIARY = 0.35 * FUNDRAISING_ONE_HUNDRED_PERCENT
-// when should the pre-sale be open, setting 0 will allow anyone to open the pre-sale anytime after deployment
+// What percentage of Hatch contributions should go to the Funding Pool and be non refundable
+const HATCH_PERCENT_FUNDING_FOR_BENEFICIARY = 0.05 * FUNDRAISING_ONE_HUNDRED_PERCENT
+// when should the Hatch be open, setting 0 will allow anyone to open the Hatch anytime after deployment
 const OPEN_DATE = 0
 
 // # Impact hours settings
@@ -82,9 +82,9 @@ const IMPACT_HOURS_CSV = path.resolve('./ih.csv');
 // How much precision IH have, we usually use 3 decimals
 const IMPACT_HOUR_DECIMALS = 3
 // Max theoretical rate per impact hour
-const MAX_IH_RATE = 1 * ONE_TOKEN
+const MAX_IH_RATE = .01 * ONE_TOKEN
 // Expected raise per impact hour
-const EXPECTED_RAISE_PER_IH = 0.01 * ONE_TOKEN / 10 ** IMPACT_HOUR_DECIMALS
+const EXPECTED_RAISE_PER_IH = .012 * ONE_TOKEN / 10 ** IMPACT_HOUR_DECIMALS
 
 module.exports = async (callback) => {
   try {
