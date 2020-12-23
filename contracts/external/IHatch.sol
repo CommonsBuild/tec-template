@@ -21,4 +21,6 @@ contract IHatch {
         uint256                      _fundingForBeneficiaryPct,
         uint64                       _openDate
     ) external;
+
+    function close() external;
 }
