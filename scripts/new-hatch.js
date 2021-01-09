@@ -12,7 +12,7 @@ const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.arg
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
 
-const hatchTemplateAddress = () => "0x0dd096b2e80349b1f7bb3e9142c84f231dbfe542"
+const hatchTemplateAddress = () => "0x0eb1754255b6018d9de1b63cb9a5825390b3f7dc"
 
 // Helpers, no need to change
 const HOURS = 60 * 60
@@ -65,7 +65,7 @@ const HATCH_MAX_GOAL = 1000 * ONE_TOKEN
 // How long should the hatch period last
 const HATCH_PERIOD = 15 * DAYS
 // How many organization tokens should be minted per collateral token 
-const HATCH_EXCHANGE_RATE = 0.00000001 * FUNDRAISING_ONE_TOKEN
+const HATCH_EXCHANGE_RATE = 10000 * PPM * ONE_TOKEN / FUNDRAISING_ONE_TOKEN
 // When does the cliff for vesting restrictions end 
 const VESTING_CLIFF_PERIOD = HATCH_PERIOD + 1 // 1 second after hatch
 // When will the Hatchers be fully vested and able to use the redemptions app
