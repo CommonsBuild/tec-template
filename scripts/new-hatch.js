@@ -1,6 +1,3 @@
-const path = require('path')
-const csv = require('csvtojson')
-
 const HatchTemplate = artifacts.require("HatchTemplate")
 
 const DAO_ID = "testtec" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
@@ -22,7 +19,6 @@ const ONE_TOKEN = 1e18
 const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
 const FUNDRAISING_ONE_TOKEN = 1e18
 const PPM = 1000000
-const CONTRIBUTORS_PROCESSED_PER_TRANSACTION = 10
 
 const BLOCKTIME = network() === "rinkeby" ? 15 : network() === "mainnet" ? 13 : 5 // 15 rinkeby, 13 mainnet, 5 xdai
 console.log(`Every ${BLOCKTIME}s a new block is mined in ${network()}.`)
@@ -70,7 +66,6 @@ const HATCH_EXCHANGE_RATE = 10000 * PPM * ONE_TOKEN / FUNDRAISING_ONE_TOKEN
 const VESTING_CLIFF_PERIOD = HATCH_PERIOD + 1 // 1 second after hatch
 // When will the Hatchers be fully vested and able to use the redemptions app
 const VESTING_COMPLETE_PERIOD = VESTING_CLIFF_PERIOD + 1 // 2 seconds after hatch
-const HATCH_PERCENT_SUPPLY_OFFERED = FUNDRAISING_ONE_HUNDRED_PERCENT
 // What percentage of Hatch contributions should go to the Funding Pool and therefore be non refundable
 const HATCH_PERCENT_FUNDING_FOR_BENEFICIARY = 0.05 * FUNDRAISING_ONE_HUNDRED_PERCENT
 // when should the Hatch open, setting 0 will allow anyone to open the Hatch anytime after deployment
@@ -78,15 +73,12 @@ const OPEN_DATE = 0
 
 // # Impact hours settings
 
-// CSV with two columns: "hatcher address" and "impact hours"
-const IMPACT_HOURS_CSV = path.resolve('./ih.csv'); // total IH in this test is the sum of the IH in this CSV
-// How much precision IH have, we usually use 3 decimals
-const IMPACT_HOUR_DECIMALS = 3
+// Impact Hours token address
+const IH_TOKEN = '0xdf2c3c8764a92eb43d2eea0a4c2d77c2306b0835'
 // Max theoretical rate per impact hour in Collateral_token per IH
-const MAX_IH_RATE = .01 * ONE_TOKEN
+const MAX_IH_RATE = 1
 // How much will we need to raise to reach 1/2 of the MAX_IH_RATE divided by total IH
-const EXPECTED_RAISE_PER_IH = .012 * ONE_TOKEN / 10 ** IMPACT_HOUR_DECIMALS
-
+const EXPECTED_RAISE_PER_IH = .012 * ONE_TOKEN
 module.exports = async (callback) => {
   try {
     const hatchTemplate = await HatchTemplate.at(hatchTemplateAddress())
@@ -106,27 +98,13 @@ module.exports = async (callback) => {
       HATCH_EXCHANGE_RATE,
       VESTING_CLIFF_PERIOD,
       VESTING_COMPLETE_PERIOD,
-      HATCH_PERCENT_SUPPLY_OFFERED,
       HATCH_PERCENT_FUNDING_FOR_BENEFICIARY,
       OPEN_DATE,
+      IH_TOKEN,
       MAX_IH_RATE,
       EXPECTED_RAISE_PER_IH
     )
     console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
-
-    const data = await csv({ output: 'csv' }).fromFile(IMPACT_HOURS_CSV)
-    const contributors = data.map(value => value[0])
-    const impactHours = data.map(value => parseInt(value[1] * 10 ** IMPACT_HOUR_DECIMALS).toString())
-    const total = Math.ceil(contributors.length / CONTRIBUTORS_PROCESSED_PER_TRANSACTION)
-    let counter = 1
-    for (let i = 0; i < contributors.length; i += CONTRIBUTORS_PROCESSED_PER_TRANSACTION) {
-      const txReceipt = await hatchTemplate.addImpactHours(
-        contributors.slice(i, i + CONTRIBUTORS_PROCESSED_PER_TRANSACTION),
-        impactHours.slice(i, i + CONTRIBUTORS_PROCESSED_PER_TRANSACTION),
-        i + CONTRIBUTORS_PROCESSED_PER_TRANSACTION >= contributors.length // last?
-      )
-      console.log(`Impact hours Txs: ${counter++} of ${total}. Contributors ${i + 1} to ${Math.min(i + CONTRIBUTORS_PROCESSED_PER_TRANSACTION, contributors.length)} added. Gas fee: ${txReceipt.receipt.gasUsed}`)
-    }
 
     const createDaoTxThreeReceipt = await hatchTemplate.createDaoTxThree(
       daoId(),

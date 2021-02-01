@@ -26,6 +26,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
     uint256 private constant TOKEN_MAX_PER_ACCOUNT = uint256(-1);
     uint64 private constant DEFAULT_FINANCE_PERIOD = uint64(30 days);
     address private constant ANY_ENTITY = address(-1);
+    uint256 private constant ONE_HUNDRED_PERCENT = 1e6;
     uint8 private constant ORACLE_PARAM_ID = 203;
     enum Op { NONE, EQ, NEQ, GT, LT, GTE, LTE, RET, NOT, AND, OR, XOR, IF_ELSE }
 
@@ -95,7 +96,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
     * @param _vestingCliffPeriod Vesting cliff length for hatch bought tokens in seconds
     * @param _vestingCompletePeriod Vesting complete length for hatch bought tokens in seconds
     * @param _supplyOfferedPct Percent of total supply offered in hatch in PPM
-    * @param _fundingForBeneficiaryPct Percent of raised hatch funds sent to the organization in PPM
+    * @param _hatchTributePct Percent of raised hatch funds sent to the organization in PPM
     * @param _openDate The time the hatch starts, requires manual opening if set to 0
     */
     function createDaoTxTwo(
@@ -105,9 +106,9 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         uint256 _exchangeRate,
         uint64 _vestingCliffPeriod,
         uint64 _vestingCompletePeriod,
-        uint256 _supplyOfferedPct,
-        uint256 _fundingForBeneficiaryPct,
+        uint256 _hatchTributePct,
         uint64 _openDate,
+        address _ihToken,
         uint256 _maxIHRate,
         uint256 _expectedRaisePerIH
     )
@@ -122,15 +123,14 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
             _exchangeRate,
             _vestingCliffPeriod,
             _vestingCompletePeriod,
-            _supplyOfferedPct,
-            _fundingForBeneficiaryPct,
+            _hatchTributePct,
             _openDate
         );
 
-        senderStoredAddresses[msg.sender].impactHours = _installImpactHours(senderStoredAddresses[msg.sender].dao, _hatch, _maxIHRate, _expectedRaisePerIH);
+        senderStoredAddresses[msg.sender].impactHours = _installImpactHours(senderStoredAddresses[msg.sender].dao, _ihToken, _hatch, _maxIHRate, _expectedRaisePerIH);
 
         _createHookedTokenManagerPermissions();
-        senderStoredAddresses[msg.sender].acl.createPermission(ANY_ENTITY, senderStoredAddresses[msg.sender].impactHours, senderStoredAddresses[msg.sender].impactHours.ADD_IMPACT_HOURS_ROLE(), address(this));
+        senderStoredAddresses[msg.sender].acl.createPermission(ANY_ENTITY, senderStoredAddresses[msg.sender].impactHours, senderStoredAddresses[msg.sender].impactHours.CLAIM_ROLE(), address(this));
     }
 
     function addImpactHours(
@@ -178,7 +178,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
 
         senderStoredAddresses[msg.sender].hatchOracle = _installHatchOracleApp(senderStoredAddresses[msg.sender].dao, _scoreToken, _hatchOracleRatio, senderStoredAddresses[msg.sender].hatch);
         _createHatchPermissions();
-        _removePermissionFromTemplate(senderStoredAddresses[msg.sender].acl, senderStoredAddresses[msg.sender].impactHours, senderStoredAddresses[msg.sender].impactHours.ADD_IMPACT_HOURS_ROLE());
+        _removePermissionFromTemplate(senderStoredAddresses[msg.sender].acl, senderStoredAddresses[msg.sender].impactHours, senderStoredAddresses[msg.sender].impactHours.CLAIM_ROLE());
 
         Redemptions redemptions = _installRedemptions(senderStoredAddresses[msg.sender].dao, senderStoredAddresses[msg.sender].reserveAgent, hookedTokenManager, _redeemableTokens);
         _createRedemptionsPermissions(acl, redemptions, dandelionVoting);
@@ -216,11 +216,11 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         return hatchOracle;
     }
 
-    function _installImpactHours(Kernel _dao, address _hatch, uint256 _maxRate, uint256 _expectedRaisePerIH)
+    function _installImpactHours(Kernel _dao, address _impactHoursToken, address _hatch, uint256 _maxRate, uint256 _expectedRaisePerIH)
         internal returns(ImpactHours)
     {
         ImpactHours ih = ImpactHours(_installNonDefaultApp(_dao, IMPACT_HOURS_ID));
-        ih.initialize(_hatch, _maxRate, _expectedRaisePerIH);
+        ih.initialize(_impactHoursToken, _hatch, _maxRate, _expectedRaisePerIH);
         return ih;
     }
 
@@ -256,8 +256,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         uint256 _exchangeRate,
         uint64  _vestingCliffPeriod,
         uint64  _vestingCompletePeriod,
-        uint256 _supplyOfferedPct,
-        uint256 _fundingForBeneficiaryPct,
+        uint256 _hatchTributePct,
         uint64  _openDate
     )
         internal returns (Hatch)
@@ -276,8 +275,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
             _exchangeRate,
             _vestingCliffPeriod,
             _vestingCompletePeriod,
-            _supplyOfferedPct,
-            _fundingForBeneficiaryPct,
+            _hatchTributePct,
             _openDate,
             collateralToken
         );
@@ -292,8 +290,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         uint256 _exchangeRate,
         uint64  _vestingCliffPeriod,
         uint64  _vestingCompletePeriod,
-        uint256 _supplyOfferedPct,
-        uint256 _fundingForBeneficiaryPct,
+        uint256 _hatchTributePct,
         uint64  _openDate,
         address _collateralToken
     )
@@ -311,8 +308,8 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
             _exchangeRate,
             _vestingCliffPeriod,
             _vestingCompletePeriod,
-            _supplyOfferedPct,
-            _fundingForBeneficiaryPct,
+            ONE_HUNDRED_PERCENT, // do not mint tokens for funding pool
+            _hatchTributePct,
             _openDate
         );
     }
