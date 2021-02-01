@@ -183,6 +183,7 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
         Redemptions redemptions = _installRedemptions(senderStoredAddresses[msg.sender].dao, senderStoredAddresses[msg.sender].reserveAgent, hookedTokenManager, _redeemableTokens);
         _createRedemptionsPermissions(acl, redemptions, dandelionVoting);
         _createAgentPermissions(acl, senderStoredAddresses[msg.sender].reserveAgent, dandelionVoting, address(dandelionVoting));
+        acl.createPermission(redemptions, senderStoredAddresses[msg.sender].reserveAgent, senderStoredAddresses[msg.sender].reserveAgent.TRANSFER_ROLE(), address(dandelionVoting));
 
         _validateId(_id);
 
