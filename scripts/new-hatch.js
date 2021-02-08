@@ -26,11 +26,11 @@ console.log(`Every ${BLOCKTIME}s a new block is mined in ${network()}.`)
 // CONFIGURATION
 
 // Collateral Token is used to pay contributors and held in the bonding curve reserve
-const COLLATERAL_TOKEN = '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d' // wxDAI
+const COLLATERAL_TOKEN = '0xfb8f60246d56905866e12443ec0836ebfb3e1f2e' // tDAI
 
 // Org Token represents membership in the community and influence in proposals
-const ORG_TOKEN_NAME = "Token Engineering Commons TEST Token"
-const ORG_TOKEN_SYMBOL = "TESTTEC"
+const ORG_TOKEN_NAME = "Token Engineering Commons TEST Hatch Token"
+const ORG_TOKEN_SYMBOL = "TESTTECH"
 
 // # Hatch Oracle Settings
 

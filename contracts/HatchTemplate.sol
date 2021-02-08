@@ -95,9 +95,11 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
     * @param _exchangeRate Hatch exchange rate in PPM
     * @param _vestingCliffPeriod Vesting cliff length for hatch bought tokens in seconds
     * @param _vestingCompletePeriod Vesting complete length for hatch bought tokens in seconds
-    * @param _supplyOfferedPct Percent of total supply offered in hatch in PPM
     * @param _hatchTributePct Percent of raised hatch funds sent to the organization in PPM
     * @param _openDate The time the hatch starts, requires manual opening if set to 0
+    * @param _ihToken Impact hours token address
+    * @param _maxIHRate Max theoretical rate per impact hour in Collateral_token per IH
+    * @param _expectedRaisePerIH How much will we need to raise to reach 1/2 of the MAX_IH_RATE divided by total IH
     */
     function createDaoTxTwo(
         uint256 _minGoal,
@@ -131,14 +133,6 @@ contract HatchTemplate is BaseTemplate, AppIdsXDai {
 
         _createHookedTokenManagerPermissions();
         senderStoredAddresses[msg.sender].acl.createPermission(ANY_ENTITY, senderStoredAddresses[msg.sender].impactHours, senderStoredAddresses[msg.sender].impactHours.CLAIM_ROLE(), address(this));
-    }
-
-    function addImpactHours(
-        address[] _contributors,
-        uint256[] _impactHours,
-        bool _last
-    ) public {
-        senderStoredAddresses[msg.sender].impactHours.addImpactHours(_contributors, _impactHours, _last);
     }
 
     /**
