@@ -1,25 +1,26 @@
 {
   "environments": {
     "default": {
-      "appName": "gardens-template.aragonpm.eth",
+      "appName": "hatch-template.aragonpm.eth",
+      "registry": "0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1",
       "network": "rpc"
     },
     "devnet": {
-      "appName": "gardens-template.aragonpm.eth",
+      "appName": "hatch-template.aragonpm.eth",
       "network": "devnet"
     },
     "xdai": {
-      "appName": "gardens-template.open.aragonpm.eth",
-      "address": "0x72cb8d0dfd08d59b1c1d6343d86bf022833f2faf",
+      "appName": "hatch-template.aragonpm.eth",
+      "address": "0x02ff07d86bc4206b604c463c168c452bfd8ede2c",
       "network": "xdai",
       "registry": "0xaafca6b0c89521752e559650206d7c925fd0e530"
     },
     "rinkeby": {
-      "appName": "gardens-template.aragonpm.eth",
-      "address": "0x76e494d0324db434a7c98f42e3a09ac658687950",
+      "appName": "hatch-template.aragonpm.eth",
+      "address": "0x69fe3b1d45fc20fd42f881f29f975bc932bddbe8",
       "network": "rinkeby",
       "registry": "0x98Df287B6C145399Aaa709692c8D308357bC085D"
     }
   },
-  "path": "contracts/GardensTemplate.sol"
+  "path": "contracts/HatchTemplate.sol"
 }

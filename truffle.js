@@ -6,13 +6,12 @@ const HDWalletProviderPrivkey = require('truffle-hdwallet-provider-privkey')
 
 const DEFAULT_MNEMONIC = 'stumble story behind hurt patient ball whisper art swift tongue ice alien'
 
+const defaultRPC = (network) =>
+  `https://${network}.infura.io`
+
 const configFilePath = (filename) =>
   path.join(homedir(), `.aragon/${filename}`)
 
-const INFURA_API_KEY = require(configFilePath('infura.json')).api_key
-
-const defaultRPC = (network) =>
-  `https://${network}.infura.io/v3/${INFURA_API_KEY}`
 const mnemonic = () => {
   try {
     return require(configFilePath('mnemonic.json')).mnemonic
@@ -34,15 +33,17 @@ const providerForNetwork = (network) => (
   () => {
     let { rpc, keys } = settingsForNetwork(network)
 
-    rpc = rpc || defaultRPC(network)
+    rpc = rpc || defaultRPC(network)
 
-    if (!keys || keys.length == 0) {
+    if (!keys || keys.length == 0) {
       return new HDWalletProvider(mnemonic(), rpc)
     }
 
     return new HDWalletProviderPrivkey(keys, rpc)
   }
 )
+
+// const mocha = process.env.GAS_REPORTER ? mochaGasSettings : {}
 
 module.exports = {
   networks: {
@@ -51,7 +52,7 @@ module.exports = {
       host: 'localhost',
       port: 8545,
       gas: 8.9e6,
-      gasPrice: 20000000001
+      gasPrice: 15000000001
     },
     devnet: {
       network_id: 16,
@@ -71,17 +72,17 @@ module.exports = {
       provider: providerForNetwork('ropsten'),
       gas: 4.712e6
     },
+    xdai: { // To deploy Honey Pot Template to xDai you must add xDai to the config at @aragon/os/truffle-config. Alternatively follow through from deploy.js and search for Networks.
+      network_id: 100,
+      provider: providerForNetwork('xdai'),
+      gas: 12000000,
+      gasPrice: 1000000000
+    },
     rinkeby: {
       network_id: 4,
       provider: providerForNetwork('rinkeby'),
       gas: 7.9e6,
       gasPrice: 15000000001
-    },
-    xdai: {
-      network_id: 100,
-      provider: providerForNetwork('xdai'),
-      gas: 124e5,
-      gasPrice: 1100000000
     },
     kovan: {
       network_id: 42,
@@ -97,15 +98,10 @@ module.exports = {
     },
   },
   build: {},
-  compilers: {
-    solc: {
-      version: "0.4.24",
-      settings: {
-        optimizer: {
-          enabled: true,
-          runs: 1
-        }
-      }
+  solc: {
+    optimizer: {
+      enabled: true,
+      runs: 1,
     }
   }
 }

@@ -9,7 +9,7 @@ const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.arg
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
 
-const hatchTemplateAddress = () => "0x0eb1754255b6018d9de1b63cb9a5825390b3f7dc"
+const hatchTemplateAddress = () => "0x02ff07d86bc4206b604c463c168c452bfd8ede2c"
 
 // Helpers, no need to change
 const HOURS = 60 * 60

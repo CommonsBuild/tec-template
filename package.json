@@ -1,7 +1,7 @@
 {
   "name": "@aragon/help-dao-template",
   "version": "1.0.0",
-  "description": "Help Dao Template",
+  "description": "Hatch Dao Template",
   "license": "GPL-3.0-or-later",
   "files": [
     "abi/",
@@ -39,27 +39,18 @@
     "publish:mainnet": "aragon apm publish major $(npm run deploy:mainnet | tail -n 1) --environment mainnet --gas-price 7"
   },
   "dependencies": {
+    "@aragon/os": "4.3.0",
+    "@aragon/id": "2.0.3",
+    "@aragon/apps-agent": "2.1.0",
+    "@aragon/apps-shared-minime": "^1.0.0",
+    "@aragon/templates-shared": "1.0.0",
     "@1hive/apps-dandelion-voting": "2.0.0",
     "@1hive/apps-redemptions": "2.0.1",
-    "@1hive/apps-token-manager": "2.1.0",
-    "@ablack/fundraising-aragon-fundraising": "^1.0.0",
-    "@ablack/fundraising-bancor-formula": "^1.0.0",
-    "@ablack/fundraising-batched-bancor-market-maker": "^1.0.0",
-    "@ablack/fundraising-presale": "^1.0.0",
-    "@aragon/apps-agent": "2.1.0",
-    "@aragon/apps-finance": "^3.0.0",
-    "@aragon/apps-shared-minime": "^1.0.0",
-    "@aragon/apps-token-manager": "^2.1.0",
-    "@aragon/apps-vault": "^4.1.0",
-    "@aragon/apps-voting": "^2.1.0",
-    "@aragon/id": "2.0.3",
-    "@aragon/os": "4.3.0",
-    "@aragon/templates-shared": "1.0.0",
-    "js-sha3": "^0.8.0",
-    "csvtojson": "^2.0.10"
+    "@1hive/apps-token-manager": "2.1.0"
   },
   "devDependencies": {
     "@aragon/test-helpers": "^2.0.0",
+    "@aragon/contract-helpers-test": "^0.1.0-rc.2",
     "@aragon/cli": "7.0.3",
     "eth-ens-namehash": "^2.0.8",
     "eth-gas-reporter": "^0.1.1",
